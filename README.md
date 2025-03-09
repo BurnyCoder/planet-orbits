@@ -51,3 +51,5 @@ The simulation consists of three main classes:
 1. **Body**: Base class for all celestial bodies with physics properties
 2. **Sun** and **Planet**: Specialized body types with different appearances
 3. **SolarSystem**: Manages all bodies and their interactions
+
+The simulation primarily implements Newton's law of universal gravitation (`force = GRAVITY_STRENGTH * first.mass * second.mass / (distance * distance + DISTANCE_DAMPING)`), Newton's second law (`acceleration = force / mass`), orbital velocity based on Kepler's laws (`orbital_speed = math.sqrt(sun.mass / distance) * orbital_speed_factor`), basic kinematics for position and velocity updates, distance calculation using the Euclidean formula, and orbital correction formulas to maintain stable planetary orbits.
