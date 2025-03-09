@@ -56,6 +56,46 @@ PLANET_COLORS = [RED, GREEN, BLUE]
 clock = pygame.time.Clock()
 FPS = 60
 
+# Global lists for random planet name generation
+PLANET_NAME_PREFIXES = [
+    "Nova", "Astro", "Cosmo", "Stella", "Lumi", "Orbi", "Chrono", "Galax", 
+    "Nebula", "Void", "Sol", "Luna", "Aster", "Celest", "Empyr", "Ether",
+    "Merc", "Plu", "Sat", "Jup", "Mar", "Ter", "Ven", "Zeus", "Hades", "Posei"
+]
+
+PLANET_NAME_SUFFIXES = [
+    "on", "ia", "ius", "us", "ius", "ix", "or", "um", "ean", "aris", "oid",
+    "ite", "ese", "nia", "ria", "sia", "tis", "mus", "pus", "ter", "cus", "tus",
+    "rus", "nox", "rax", "lax", "ton", "tron", "za", "ga", "na", "ma", "tha"
+]
+
+PLANET_NAME_MODIFIERS = [
+    "Prime", "Alpha", "Beta", "Gamma", "Delta", "Minor", "Major", "Superior",
+    "Inferior", "Proxima", "Ultima", "Nova", "Maximus", "Minimus", "Secundus"
+]
+
+def generate_random_planet_name():
+    """Generate a random planet name using combinations of prefixes and suffixes."""
+    name_type = random.randint(1, 3)
+    
+    if name_type == 1:
+        # Simple name: prefix + suffix (e.g., "Astron")
+        name = random.choice(PLANET_NAME_PREFIXES) + random.choice(PLANET_NAME_SUFFIXES)
+    elif name_type == 2:
+        # Double name: prefix + suffix + space + prefix + suffix (e.g., "Nebularis Voidtron")
+        name = random.choice(PLANET_NAME_PREFIXES) + random.choice(PLANET_NAME_SUFFIXES)
+        name += " " + random.choice(PLANET_NAME_PREFIXES) + random.choice(PLANET_NAME_SUFFIXES)
+    else:
+        # Modified name: prefix + suffix + space + modifier (e.g., "Stellion Prime")
+        name = random.choice(PLANET_NAME_PREFIXES) + random.choice(PLANET_NAME_SUFFIXES)
+        name += " " + random.choice(PLANET_NAME_MODIFIERS)
+    
+    # Sometimes add a number designation
+    if random.random() < 0.3:  # 30% chance
+        name += " " + str(random.randint(1, 999))
+    
+    return name
+
 class Body:
     """Base class for all celestial bodies."""
     min_display_size = 5  # Smaller minimum size
@@ -338,7 +378,7 @@ class SolarSystem:
                     body.velocity = (vx, vy)
 
 def add_random_planet(solar_system, pos):
-    """Add a planet at the given position with appropriate velocity."""
+    """Add a planet at the given position with appropriate velocity and a random name."""
     x, y = pos
     # Convert to coordinates relative to center
     x -= WIDTH // 2
@@ -391,7 +431,12 @@ def add_random_planet(solar_system, pos):
     planet = Planet(mass, (x, y), (vx, vy))
     # Set a smaller size for user-added planets
     planet.display_size = 3
-    solar_system.add_body(planet)
+    
+    # Generate and assign a random name to the planet
+    planet_name = generate_random_planet_name()
+    print(f"Added new planet: {planet_name}")
+    
+    solar_system.add_body(planet, planet_name)
 
 def main():
     # Create solar system
