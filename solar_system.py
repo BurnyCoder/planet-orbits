@@ -249,6 +249,8 @@ class SolarSystem:
         self.orbit_correction_enabled = True  # Flag to toggle orbit correction
         self.alien_physics_enabled = False  # Flag to toggle alien physics mode
         self.current_physics_mode = 0  # Track the current physics mode for oscillation
+        self.message_log = []  # List to store game messages for display
+        self.max_log_messages = 5  # Maximum number of messages to display at once
     
     def add_body(self, body, name=None):
         """Add a body to the solar system."""
@@ -393,10 +395,39 @@ class SolarSystem:
             # Change modes every few seconds
             mode_duration = 10  # seconds per mode
             time_seconds = pygame.time.get_ticks() / 1000
-            physics_mode = int(time_seconds / mode_duration) % 7  # Cycle through all 7 modes
+            current_mode = int(time_seconds / mode_duration) % 7  # Cycle through all 7 modes
+            
+            # Check if mode has changed and log the change
+            if current_mode != self.current_physics_mode:
+                mode_names = [
+                    "Magnetic Ballet",
+                    "Orbital Waltz",
+                    "Vibration Samba",
+                    "Quantum Tango",
+                    "Choreographed Orbits",
+                    "Spiral Dance",
+                    "Rhythmic Pulsation"
+                ]
+                
+                # Add message about mode change with appropriate color
+                mode_colors = [
+                    (255, 100, 100),  # Red for magnetic ballet
+                    (100, 255, 100),  # Green for orbital waltz
+                    (100, 100, 255),  # Blue for vibration samba
+                    (255, 255, 100),  # Yellow for quantum tango
+                    (255, 100, 255),  # Magenta for choreographed orbits
+                    (255, 100, 100),  # Red for spiral dance
+                    (100, 100, 255)   # Blue for rhythmic pulsation
+                ]
+                
+                # Log the mode change with the color of the new mode
+                self.add_message(f"🔄 Physics mode changed to: {mode_names[current_mode]}", mode_colors[current_mode])
             
             # Store the current mode for display
-            self.current_physics_mode = physics_mode
+            self.current_physics_mode = current_mode
+            
+            # Set physics mode for calculations
+            physics_mode = current_mode
             
             if physics_mode == 0:
                 # Magnetic Ballet
@@ -724,17 +755,21 @@ class SolarSystem:
             
             # Handle sun-planet and sun-asteroid collisions
             if isinstance(first, Sun) and (isinstance(second, Planet) or isinstance(second, Asteroid)):
-                print(f"⚡ Collision detected: {first_name} destroyed {second_name}!")
+                message = f"⚡ {first_name} destroyed {second_name}!"
+                self.add_message(message, (255, 200, 0))  # Yellow-orange for sun destruction
                 self.remove_body(second)
             elif isinstance(second, Sun) and (isinstance(first, Planet) or isinstance(first, Asteroid)):
-                print(f"⚡ Collision detected: {second_name} destroyed {first_name}!")
+                message = f"⚡ {second_name} destroyed {first_name}!"
+                self.add_message(message, (255, 200, 0))  # Yellow-orange for sun destruction
                 self.remove_body(first)
             # Handle planet-asteroid collisions (asteroid gets absorbed)
             elif isinstance(first, Planet) and isinstance(second, Asteroid):
-                print(f"💥 Collision detected: Planet {first_name} absorbed asteroid {second_name}!")
+                message = f"💥 Planet {first_name} absorbed asteroid {second_name}!"
+                self.add_message(message, (150, 255, 150))  # Light green for absorption
                 self.remove_body(second)
             elif isinstance(first, Asteroid) and isinstance(second, Planet):
-                print(f"💥 Collision detected: Planet {second_name} absorbed asteroid {first_name}!")
+                message = f"💥 Planet {second_name} absorbed asteroid {first_name}!"
+                self.add_message(message, (150, 255, 150))  # Light green for absorption
                 self.remove_body(first)
     
     def handle_all_interactions(self):
@@ -791,6 +826,45 @@ class SolarSystem:
                         vy += correction_strength * math.sin(correction_angle) * TIME_SCALE
                         body.velocity = (vx, vy)
 
+    def add_message(self, message, color=None):
+        """Add a message to the log with an optional color."""
+        if color is None:
+            color = (255, 255, 255)  # Default to white text
+        
+        # Add timestamp to message
+        timestamp = pygame.time.get_ticks() / 1000  # Time in seconds
+        formatted_time = f"{timestamp:.1f}s"
+        timestamped_message = f"[{formatted_time}] {message}"
+        
+        # Add to log with color
+        self.message_log.append((timestamped_message, color))
+        
+        # Trim log if it gets too long
+        if len(self.message_log) > self.max_log_messages:
+            self.message_log.pop(0)  # Remove oldest message
+        
+        # Also print to console for debugging
+        print(f"LOG: {timestamped_message}")
+
+    def display_message_log(self, surface, font, start_x, start_y):
+        """Display the message log on the screen."""
+        # Calculate the y-position for the log section header
+        header_y = start_y
+        
+        # Display a header for the log section if there are any messages
+        if self.message_log:
+            log_header = font.render("Event Log:", True, (200, 200, 200))
+            surface.blit(log_header, (start_x, header_y))
+            
+            # Start displaying messages below the header
+            message_y = header_y + 25
+            
+            # Display each message with its color
+            for message, color in self.message_log:
+                message_display = font.render(message, True, color)
+                surface.blit(message_display, (start_x, message_y))
+                message_y += 20  # Spacing between messages
+
 def add_random_planet(solar_system, pos):
     """Add a planet at the given position with appropriate velocity and a random name."""
     x, y = pos
@@ -846,11 +920,14 @@ def add_random_planet(solar_system, pos):
     # Set a smaller size for user-added planets
     planet.display_size = 3
     
-    # Generate and assign a random name to the planet
+    # Generate random name
     planet_name = generate_random_planet_name()
-    print(f"Added new planet: {planet_name}")
     
+    # Add the planet to the system and log the event
     solar_system.add_body(planet, planet_name)
+    solar_system.add_message(f"🪐 New planet {planet_name} added at distance {distance:.1f}", (100, 200, 255))
+    
+    return planet, planet_name
 
 def add_elliptical_asteroid(solar_system, min_distance, max_distance, eccentricity=None):
     """Add an asteroid with an elliptical orbit between min and max distance from the sun."""
@@ -903,19 +980,27 @@ def add_elliptical_asteroid(solar_system, min_distance, max_distance, eccentrici
     
     # Generate a name for the asteroid
     asteroid_name = generate_random_asteroid_name()
-    print(f"Added asteroid: {asteroid_name}, eccentricity: {eccentricity:.2f}")
     
+    # Add to solar system and log the event
     solar_system.add_body(asteroid, asteroid_name)
-    return asteroid
+    solar_system.add_message(f"☄️ New asteroid {asteroid_name} added, eccentricity: {eccentricity:.2f}", (200, 200, 200))
+    
+    return asteroid, asteroid_name
 
 def main():
     # Create solar system
     solar_system = SolarSystem()
     
-    # Add sun at the center - make the sun smaller
-    sun = Sun(10000)
-    sun.display_size = 50  # Fixed size for sun
+    # Add welcome messages
+    solar_system.add_message("🚀 Welcome to the Solar System Simulator!", (255, 255, 100))
+    solar_system.add_message("Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle orbit correction", (200, 200, 200))
+    solar_system.add_message("P: Toggle alien physics | A: Add asteroid | +/-: Change speed | S: Reset speed | T: Toggle trails", (200, 200, 200))
+    
+    # Create the sun at the center
+    sun = Sun(10000)  # Large mass for stable orbits
+    sun.display_size = 50  # Fixed display size for sun
     solar_system.add_body(sun, "Sun")
+    solar_system.add_message("☀️ Sun created at the center", (255, 200, 0))
     
     # Scale down the distance values to fit all planets on screen
     # Maintain the same relative distances between planets but reduce absolute distances
@@ -1035,9 +1120,6 @@ def main():
     
     # Add font for instructions
     font = pygame.font.SysFont('Arial', 18)
-    # Break instructions into multiple lines to fit on screen
-    instruction_text1 = font.render('Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle orbit correction', True, WHITE)
-    instruction_text2 = font.render('P: Toggle alien physics | A: Add asteroid | +/-: Change speed | S: Reset speed | T: Toggle trails', True, WHITE)
     
     # Global for time scale
     global TIME_SCALE
@@ -1055,19 +1137,31 @@ def main():
                     running = False
                 elif event.key == pygame.K_o:  # Toggle orbits with 'o' key
                     solar_system.show_orbits = not solar_system.show_orbits
-                    print(f"Orbit display: {'Enabled' if solar_system.show_orbits else 'Disabled'}")
+                    status = 'Enabled' if solar_system.show_orbits else 'Disabled'
+                    solar_system.add_message(f"Orbit display: {status}", (150, 150, 150))
+                    print(f"Orbit display: {status}")
                 elif event.key == pygame.K_t:  # Toggle trails with 't' key
                     solar_system.show_trails = not solar_system.show_trails
-                    print(f"Orbit trails display: {'Enabled' if solar_system.show_trails else 'Disabled'}")
+                    status = 'Enabled' if solar_system.show_trails else 'Disabled'
+                    solar_system.add_message(f"Orbit trails: {status}", (150, 150, 150))
+                    print(f"Orbit trails display: {status}")
                 elif event.key == pygame.K_c:  # Toggle orbit correction with 'c' key
                     solar_system.orbit_correction_enabled = not solar_system.orbit_correction_enabled
-                    print(f"Orbit correction: {'Enabled' if solar_system.orbit_correction_enabled else 'Disabled'}")
+                    status = 'Enabled' if solar_system.orbit_correction_enabled else 'Disabled'
+                    solar_system.add_message(f"Orbit correction: {status}", (150, 150, 150))
+                    print(f"Orbit correction: {status}")
                 elif event.key == pygame.K_p:  # Toggle alien physics with 'p' key
                     solar_system.alien_physics_enabled = not solar_system.alien_physics_enabled
-                    print(f"Alien physics: {'Enabled' if solar_system.alien_physics_enabled else 'Disabled'}")
+                    status = 'Enabled' if solar_system.alien_physics_enabled else 'Disabled'
+                    
                     # If enabling alien physics, disable orbit correction for more interesting effects
                     if solar_system.alien_physics_enabled:
                         solar_system.orbit_correction_enabled = False
+                        solar_system.add_message(f"🌌 Alien physics: {status} (orbit correction disabled)", (180, 100, 255))
+                    else:
+                        solar_system.add_message(f"Alien physics: {status}", (150, 150, 150))
+                    
+                    print(f"Alien physics: {status}")
                 elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS or event.key == pygame.K_EQUALS:
                     # Increase speed - use larger multiplier at higher speeds
                     if TIME_SCALE < 1.0:
@@ -1076,6 +1170,8 @@ def main():
                         TIME_SCALE *= 1.5   # Medium increase for moderate speeds
                     else:
                         TIME_SCALE *= 2.0   # Double the speed for high speeds
+                    
+                    solar_system.add_message(f"Speed increased to {TIME_SCALE:.2f}x", (255, 255, 255))
                     print(f"Speed: {TIME_SCALE:.2f}x")
                 elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
                     # Decrease speed - use appropriate scaling based on current speed
@@ -1088,9 +1184,12 @@ def main():
                     
                     # Ensure minimum speed
                     TIME_SCALE = max(TIME_SCALE, 0.01)
+                    
+                    solar_system.add_message(f"Speed decreased to {TIME_SCALE:.2f}x", (255, 255, 255))
                     print(f"Speed: {TIME_SCALE:.2f}x")
                 elif event.key == pygame.K_s:  # 'S' key to reset speed to normal
                     TIME_SCALE = 1.0
+                    solar_system.add_message("Speed reset to 1.00x (normal)", (255, 255, 255))
                     print(f"Speed reset to {TIME_SCALE:.2f}x (normal)")
                 elif event.key == pygame.K_a:  # 'A' key to add random asteroid
                     # Add a random asteroid with elliptical orbit
@@ -1108,6 +1207,8 @@ def main():
         solar_system.update_all(screen)
         
         # Draw instructions (split into two lines)
+        instruction_text1 = font.render("Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle orbit correction", True, (200, 200, 200))
+        instruction_text2 = font.render("P: Toggle alien physics | A: Add asteroid | +/-: Change speed | S: Reset speed | T: Toggle trails", True, (200, 200, 200))
         screen.blit(instruction_text1, (10, 10))
         screen.blit(instruction_text2, (10, 35))
         
@@ -1195,6 +1296,9 @@ def main():
             next_mode_text = f"Next Mode: {next_mode_name}"
             next_mode_display = font.render(next_mode_text, True, (180, 180, 180))
             screen.blit(next_mode_display, (10, 235))  # Adjust position
+        
+        # Display message log in the bottom left corner
+        solar_system.display_message_log(screen, font, 10, HEIGHT - 150)
         
         # Update display
         pygame.display.flip()
