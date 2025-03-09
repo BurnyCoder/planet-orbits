@@ -2,6 +2,8 @@
 
 This project simulates planets orbiting in a solar system using Python and Pygame. It demonstrates gravitational interactions between celestial bodies in a 2D space with an interactive interface.
 
+![image](https://github.com/user-attachments/assets/d2a07e2b-a90d-4bab-a998-7aa6ffa7da91)
+
 ## Features
 
 - Gravitational forces between celestial bodies
