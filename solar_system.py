@@ -243,6 +243,7 @@ class SolarSystem:
         self.bodies = []
         self.planet_names = {}  # Dictionary to store planet names
         self.show_orbits = True  # Flag to show orbit paths
+        self.show_trails = True  # Flag to show planet trails
         self.planet_trails = {}  # Dictionary to store planet trail points
         self.initial_distances = {}  # Store initial distances from sun for orbit correction
         self.orbit_correction_enabled = True  # Flag to toggle orbit correction
@@ -327,6 +328,15 @@ class SolarSystem:
                     orbit_color = (50, 50, 50)  # Dark gray
                     pygame.draw.circle(surface, orbit_color, (sun_screen_x, sun_screen_y), 
                                       int(distance), 1)
+        
+        # Draw trails for planets first (so they appear behind the planets)
+        if self.show_trails:
+            for body, trail_points in self.planet_trails.items():
+                if len(trail_points) >= 2:  # Need at least 2 points to draw a line
+                    # Use the planet's color but with reduced alpha for the trail
+                    trail_color = body.color
+                    # Draw lines connecting trail points
+                    pygame.draw.lines(surface, trail_color, False, trail_points, 1)
         
         # Update and draw all planets
         for body in self.bodies:
@@ -723,7 +733,7 @@ def main():
     
     # Add font for instructions
     font = pygame.font.SysFont('Arial', 18)
-    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | C to toggle orbit correction | +/- to change speed | A to add asteroid | S to reset speed', True, WHITE)
+    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | C to toggle orbit correction | +/- to change speed | A to add asteroid | S to reset speed | T to toggle trails', True, WHITE)
     
     # Global for time scale
     global TIME_SCALE
@@ -741,6 +751,10 @@ def main():
                     running = False
                 elif event.key == pygame.K_o:  # Toggle orbits with 'o' key
                     solar_system.show_orbits = not solar_system.show_orbits
+                    print(f"Orbit display: {'Enabled' if solar_system.show_orbits else 'Disabled'}")
+                elif event.key == pygame.K_t:  # Toggle trails with 't' key
+                    solar_system.show_trails = not solar_system.show_trails
+                    print(f"Trail display: {'Enabled' if solar_system.show_trails else 'Disabled'}")
                 elif event.key == pygame.K_c:  # Toggle orbit correction with 'c' key
                     solar_system.orbit_correction_enabled = not solar_system.orbit_correction_enabled
                     print(f"Orbit correction: {'Enabled' if solar_system.orbit_correction_enabled else 'Disabled'}")
@@ -807,6 +821,12 @@ def main():
         orbit_correction_color = (0, 255, 0) if solar_system.orbit_correction_enabled else (255, 50, 50)
         orbit_correction_display = font.render(orbit_correction_text, True, orbit_correction_color)
         screen.blit(orbit_correction_display, (10, 70))
+        
+        # Display trails status
+        trails_text = f"Planet Trails: {'ON' if solar_system.show_trails else 'OFF'}"
+        trails_color = (0, 255, 0) if solar_system.show_trails else (255, 50, 50)
+        trails_display = font.render(trails_text, True, trails_color)
+        screen.blit(trails_display, (10, 100))
         
         # Update display
         pygame.display.flip()
