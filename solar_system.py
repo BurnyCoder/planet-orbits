@@ -274,6 +274,10 @@ class SolarSystem:
     
     def remove_body(self, body):
         """Remove a body from the solar system."""
+        # Check if body is still in the list before attempting to remove
+        if body not in self.bodies:
+            return
+            
         # Get the body name if it exists
         name = self.planet_names.get(body, "unnamed")
         
@@ -783,7 +787,15 @@ class SolarSystem:
         
         # First apply gravity between all bodies
         for i, first in enumerate(bodies):
+            # Skip if body has been removed
+            if first not in self.bodies:
+                continue
+                
             for second in bodies[i+1:]:
+                # Skip if either body has been removed
+                if second not in self.bodies:
+                    continue
+                    
                 self.calculate_gravity(first, second)
                 self.check_collision(first, second)
         
