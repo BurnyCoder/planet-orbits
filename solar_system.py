@@ -1035,7 +1035,9 @@ def main():
     
     # Add font for instructions
     font = pygame.font.SysFont('Arial', 18)
-    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | C to toggle orbit correction | P to toggle alien physics | +/- to change speed | A to add asteroid | S to reset speed | T to toggle trails', True, WHITE)
+    # Break instructions into multiple lines to fit on screen
+    instruction_text1 = font.render('Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle orbit correction', True, WHITE)
+    instruction_text2 = font.render('P: Toggle alien physics | A: Add asteroid | +/-: Change speed | S: Reset speed | T: Toggle trails', True, WHITE)
     
     # Global for time scale
     global TIME_SCALE
@@ -1105,8 +1107,9 @@ def main():
         # Update and draw
         solar_system.update_all(screen)
         
-        # Draw instructions
-        screen.blit(instruction_text, (10, 10))
+        # Draw instructions (split into two lines)
+        screen.blit(instruction_text1, (10, 10))
+        screen.blit(instruction_text2, (10, 35))
         
         # Display current speed with appropriate formatting for large values
         speed_text = ""
@@ -1122,33 +1125,33 @@ def main():
             speed_color = (255, 50, 50)  # Red for very high speeds
             
         speed_display = font.render(speed_text, True, speed_color)
-        screen.blit(speed_display, (10, 40))
+        screen.blit(speed_display, (10, 65))  # Adjust position to account for second line
         
         # Display orbit correction status
         orbit_correction_text = f"Orbit Correction: {'ON' if solar_system.orbit_correction_enabled else 'OFF'}"
         orbit_correction_color = (0, 255, 0) if solar_system.orbit_correction_enabled else (255, 50, 50)
         orbit_correction_display = font.render(orbit_correction_text, True, orbit_correction_color)
-        screen.blit(orbit_correction_display, (10, 70))
+        screen.blit(orbit_correction_display, (10, 95))  # Adjust position
         
         # Display trails status
         trails_text = f"Orbit Trails: {'ON' if solar_system.show_trails else 'OFF'}"
         trails_color = (0, 255, 0) if solar_system.show_trails else (255, 50, 50)
         trails_display = font.render(trails_text, True, trails_color)
-        screen.blit(trails_display, (10, 100))
+        screen.blit(trails_display, (10, 125))  # Adjust position
         
         # Display alien physics status
         alien_text = f"Alien Physics: {'ON' if solar_system.alien_physics_enabled else 'OFF'}"
         # Use purple for alien physics to make it stand out
         alien_color = (180, 100, 255) if solar_system.alien_physics_enabled else (255, 50, 50)
         alien_display = font.render(alien_text, True, alien_color)
-        screen.blit(alien_display, (10, 130))
+        screen.blit(alien_display, (10, 155))  # Adjust position
         
         # Display active physics modes if alien physics is enabled
         if solar_system.alien_physics_enabled:
             # Add explanation of alien physics
             explanation_text = "Alien physics oscillates between modes every 10 seconds"
             explanation_display = font.render(explanation_text, True, (150, 150, 150))
-            screen.blit(explanation_display, (10, 155))
+            screen.blit(explanation_display, (10, 180))
             
             mode_names = [
                 "Magnetic Ballet",
@@ -1184,14 +1187,14 @@ def main():
             mode_text = f"Current Mode: {current_mode_name} ({time_remaining:.1f}s remaining)"
             mode_color = mode_colors[current_mode]
             mode_display = font.render(mode_text, True, mode_color)
-            screen.blit(mode_display, (10, 180))
+            screen.blit(mode_display, (10, 205))  # Adjust position
             
             # Display next mode
             next_mode = (current_mode + 1) % 7
             next_mode_name = mode_names[next_mode]
             next_mode_text = f"Next Mode: {next_mode_name}"
             next_mode_display = font.render(next_mode_text, True, (180, 180, 180))
-            screen.blit(next_mode_display, (10, 210))
+            screen.blit(next_mode_display, (10, 235))  # Adjust position
         
         # Update display
         pygame.display.flip()
