@@ -243,8 +243,8 @@ class SolarSystem:
         self.bodies = []
         self.planet_names = {}  # Dictionary to store planet names
         self.show_orbits = True  # Flag to show orbit paths
-        self.show_trails = True  # Flag to show planet trails
-        self.planet_trails = {}  # Dictionary to store planet trail points
+        self.show_trails = True  # Flag to show celestial body trails
+        self.body_trails = {}  # Dictionary to store body trail points
         self.initial_distances = {}  # Store initial distances from sun for orbit correction
         self.orbit_correction_enabled = True  # Flag to toggle orbit correction
     
@@ -253,9 +253,9 @@ class SolarSystem:
         self.bodies.append(body)
         if name:
             self.planet_names[body] = name
-            # Initialize empty trail for the planet
-            if isinstance(body, Planet):
-                self.planet_trails[body] = []
+            # Initialize empty trail for the planet or asteroid
+            if isinstance(body, Planet) or isinstance(body, Asteroid):
+                self.body_trails[body] = []
                 
                 # Store initial distance from sun for orbit correction
                 sun = None
@@ -289,8 +289,8 @@ class SolarSystem:
             self.planet_names.pop(body)
             
         # Remove from trails dictionary
-        if body in self.planet_trails:
-            self.planet_trails.pop(body)
+        if body in self.body_trails:
+            self.body_trails.pop(body)
             
         # Remove from initial distances dictionary
         if body in self.initial_distances:
@@ -329,32 +329,32 @@ class SolarSystem:
                     pygame.draw.circle(surface, orbit_color, (sun_screen_x, sun_screen_y), 
                                       int(distance), 1)
         
-        # Draw trails for planets first (so they appear behind the planets)
+        # Draw trails for celestial bodies first (so they appear behind the bodies)
         if self.show_trails:
-            for body, trail_points in self.planet_trails.items():
+            for body, trail_points in self.body_trails.items():
                 if len(trail_points) >= 2:  # Need at least 2 points to draw a line
-                    # Use the planet's color but with reduced alpha for the trail
+                    # Use the body's color but with reduced alpha for the trail
                     trail_color = body.color
                     # Draw lines connecting trail points
                     pygame.draw.lines(surface, trail_color, False, trail_points, 1)
         
-        # Update and draw all planets
+        # Update and draw all bodies
         for body in self.bodies:
             # Update position
             body.move()
             
-            # Record trail for planets
-            if body in self.planet_trails:
+            # Record trail for bodies
+            if body in self.body_trails:
                 # Add current position to trail
                 x, y = body.position
                 screen_x = int(x + WIDTH // 2)
                 screen_y = int(y + HEIGHT // 2)
-                self.planet_trails[body].append((screen_x, screen_y))
+                self.body_trails[body].append((screen_x, screen_y))
                 
                 # Limit trail length
                 max_trail_length = 50
-                if len(self.planet_trails[body]) > max_trail_length:
-                    self.planet_trails[body] = self.planet_trails[body][-max_trail_length:]
+                if len(self.body_trails[body]) > max_trail_length:
+                    self.body_trails[body] = self.body_trails[body][-max_trail_length:]
             
             # Draw body
             body.draw(surface)
@@ -754,7 +754,7 @@ def main():
                     print(f"Orbit display: {'Enabled' if solar_system.show_orbits else 'Disabled'}")
                 elif event.key == pygame.K_t:  # Toggle trails with 't' key
                     solar_system.show_trails = not solar_system.show_trails
-                    print(f"Trail display: {'Enabled' if solar_system.show_trails else 'Disabled'}")
+                    print(f"Orbit trails display: {'Enabled' if solar_system.show_trails else 'Disabled'}")
                 elif event.key == pygame.K_c:  # Toggle orbit correction with 'c' key
                     solar_system.orbit_correction_enabled = not solar_system.orbit_correction_enabled
                     print(f"Orbit correction: {'Enabled' if solar_system.orbit_correction_enabled else 'Disabled'}")
@@ -823,7 +823,7 @@ def main():
         screen.blit(orbit_correction_display, (10, 70))
         
         # Display trails status
-        trails_text = f"Planet Trails: {'ON' if solar_system.show_trails else 'OFF'}"
+        trails_text = f"Orbit Trails: {'ON' if solar_system.show_trails else 'OFF'}"
         trails_color = (0, 255, 0) if solar_system.show_trails else (255, 50, 50)
         trails_display = font.render(trails_text, True, trails_color)
         screen.blit(trails_display, (10, 100))
