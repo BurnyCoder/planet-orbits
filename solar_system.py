@@ -247,6 +247,8 @@ class SolarSystem:
         self.body_trails = {}  # Dictionary to store body trail points
         self.initial_distances = {}  # Store initial distances from sun for orbit correction
         self.orbit_correction_enabled = True  # Flag to toggle orbit correction
+        self.alien_physics_enabled = False  # Flag to toggle alien physics mode
+        self.current_physics_mode = 0  # Track the current physics mode for oscillation
     
     def add_body(self, body, name=None):
         """Add a body to the solar system."""
@@ -380,33 +382,333 @@ class SolarSystem:
         if distance < 1:
             return
         
-        # Calculate force based on masses and distance with additional damping
-        # Adding larger damping factor to prevent extreme forces at very close distances
-        force = GRAVITY_STRENGTH * first.mass * second.mass / (distance * distance + DISTANCE_DAMPING)
+        # Calculate angle before any physics calculations
         angle = first.angle_to(second)
         
+        # Calculate force based on masses and distance with additional damping
+        if self.alien_physics_enabled:
+            # ALIEN PHYSICS: Now oscillates between different modes over time
+            
+            # Determine physics mode based on time rather than body pairs
+            # Change modes every few seconds
+            mode_duration = 10  # seconds per mode
+            time_seconds = pygame.time.get_ticks() / 1000
+            physics_mode = int(time_seconds / mode_duration) % 7  # Cycle through all 7 modes
+            
+            # Store the current mode for display
+            self.current_physics_mode = physics_mode
+            
+            if physics_mode == 0:
+                # Magnetic Ballet
+                # Magnetic field - repulsion and attraction based on "charge"
+                # Use mass parity as a proxy for charge (odd vs even)
+                charge_first = first.mass % 2
+                charge_second = second.mass % 2
+                
+                # Like charges repel, unlike charges attract - but with reduced force
+                attraction_factor = 0.15  # Reduced attraction/repulsion strength
+                if charge_first == charge_second:
+                    # Repulsion - inverted gravity but gentler
+                    force = -attraction_factor * GRAVITY_STRENGTH * first.mass * second.mass / (distance * distance + DISTANCE_DAMPING)
+                else:
+                    # Attraction but weaker than normal gravity
+                    force = attraction_factor * GRAVITY_STRENGTH * first.mass * second.mass / (distance * distance + DISTANCE_DAMPING)
+                original_angle = angle
+                
+            elif physics_mode == 1:
+                # Orbital dance - perpendicular forces create rotation without attraction
+                # Reduced force strength for gentler motion
+                dance_strength = 0.15  # Reduced from default
+                force = dance_strength * GRAVITY_STRENGTH * first.mass * second.mass / (distance * distance + DISTANCE_DAMPING)
+                original_angle = angle
+                # Set angle perpendicular to create pure rotation
+                angle = angle + math.pi / 2
+                
+            elif physics_mode == 2:
+                # Vibration system - oscillating force based on distance
+                # Gentler oscillation with lower amplitude
+                frequency = 0.02  # Controls how quickly force oscillates with distance
+                oscillation_amplitude = 0.2  # Reduced amplitude
+                oscillation = oscillation_amplitude * math.sin(distance * frequency)
+                force = GRAVITY_STRENGTH * first.mass * second.mass * oscillation / (distance + DISTANCE_DAMPING)
+                original_angle = angle
+                
+            elif physics_mode == 3:
+                # Quantum tunneling - force jumps between attraction and repulsion
+                # Use positions to create a deterministic but varied pattern
+                position_hash = (hash(str(first.position[0] * 10)) + hash(str(second.position[1] * 10))) % 100
+                force_sign = 0.15 if position_hash > 50 else -0.15  # Reduced magnitude
+                force = force_sign * GRAVITY_STRENGTH * first.mass * second.mass / (distance * distance + DISTANCE_DAMPING)
+                original_angle = angle
+                
+            elif physics_mode == 4:
+                # Choreographed orbits - each body follows a circular pattern
+                # No direct force between bodies, just a tendency to move in circular patterns
+                force = 0  # No direct force
+                original_angle = angle
+                
+                # This will be handled in the acceleration section with more dance-like movements
+                
+            elif physics_mode == 5:
+                # Spiral dance - bodies spiral outward and then back inward
+                # Find center of the system as a reference point
+                
+                # Calculate distances from center first
+                first_dist_from_center = math.sqrt(first.position[0]**2 + first.position[1]**2)
+                second_dist_from_center = math.sqrt(second.position[0]**2 + second.position[1]**2)
+                
+                # Calculate spiral force - varies based on distance from center
+                phase_first = (first_dist_from_center / 100) % (2 * math.pi)
+                phase_second = (second_dist_from_center / 100) % (2 * math.pi)
+                
+                # No direct force, we'll apply individual forces in the acceleration section
+                force = 0
+                original_angle = angle
+                
+            else:
+                # Rhythmic pulsation - bodies periodically attract and repel based on a shared rhythm
+                # Using the sum of positions to create a shared rhythm
+                position_sum = first.position[0] + first.position[1] + second.position[0] + second.position[1]
+                time_factor = pygame.time.get_ticks() / 1000  # Time in seconds
+                
+                # Create a rhythmic pulsation with period based on position
+                rhythm_period = 2 + (position_sum % 3)  # Period between 2-4 seconds
+                rhythm_phase = time_factor % rhythm_period / rhythm_period  # 0 to 1
+                
+                # Force oscillates between attraction and repulsion
+                force_scale = 0.2 * math.sin(rhythm_phase * 2 * math.pi)  # -0.2 to 0.2
+                force = force_scale * GRAVITY_STRENGTH * first.mass * second.mass / (distance * distance + DISTANCE_DAMPING)
+                original_angle = angle
+        else:
+            # Normal Newtonian physics (inverse square law)
+            force = GRAVITY_STRENGTH * first.mass * second.mass / (distance * distance + DISTANCE_DAMPING)
+            
         # Apply acceleration to both bodies in opposite directions
         # First body
         acc1 = force / first.mass
         # Limit maximum acceleration for numerical stability
-        acc1 = min(acc1, 0.5)  # Reduced from 2.0
+        acc1 = min(acc1, 0.5)  # Reduced for stability
         # Apply time scale to acceleration
         acc1 *= TIME_SCALE
-        acc1_x = acc1 * math.cos(angle)
-        acc1_y = acc1 * math.sin(angle)
+        
+        # Apply acceleration in appropriate direction
+        if self.alien_physics_enabled:
+            if physics_mode == 0:  # Magnetic field
+                # Standard direction, but force already accounts for attraction/repulsion
+                acc1_x = acc1 * math.cos(angle)
+                acc1_y = acc1 * math.sin(angle)
+                
+            elif physics_mode == 1:  # Orbital dance
+                # Pure perpendicular force
+                acc1_x = acc1 * math.cos(angle)
+                acc1_y = acc1 * math.sin(angle)
+                
+            elif physics_mode == 2 or physics_mode == 3:  # Vibration or Quantum
+                # Use standard direction, force already has sign
+                acc1_x = acc1 * math.cos(angle)
+                acc1_y = acc1 * math.sin(angle)
+                
+            elif physics_mode == 4:  # Choreographed orbits
+                # Apply a gentle choreographed movement
+                # Each body follows a pattern around its current position
+                
+                # Time-dependent pattern
+                time_factor = pygame.time.get_ticks() / 2000  # Slow rotation
+                
+                # Create a unique pattern factor for this body based on its mass
+                pattern_factor = (hash(str(first.mass)) % 5) / 5  # 0 to 0.8 in steps of 0.2
+                
+                # Calculate pattern movement:
+                # 1. Circle pattern with radius proportional to mass
+                circle_radius = 0.1 * pattern_factor
+                circle_x = circle_radius * math.cos(time_factor + pattern_factor * 2 * math.pi)
+                circle_y = circle_radius * math.sin(time_factor + pattern_factor * 2 * math.pi)
+                
+                # 2. Figure-8 pattern
+                figure8_scale = 0.1 * (1 - pattern_factor)
+                figure8_x = figure8_scale * math.sin(time_factor * 2)
+                figure8_y = figure8_scale * math.sin(time_factor) * math.cos(time_factor)
+                
+                # Combine patterns
+                acc1_x = (circle_x + figure8_x) * TIME_SCALE
+                acc1_y = (circle_y + figure8_y) * TIME_SCALE
+                    
+            elif physics_mode == 5:  # Spiral dance
+                # Create spiral-like motion that depends on position
+                current_dist = math.sqrt(first.position[0]**2 + first.position[1]**2)
+                
+                # Angle from center
+                center_angle = math.atan2(first.position[1], first.position[0])
+                
+                # Determine spiral direction based on distance
+                # This creates a pattern of spiraling inward when far out and outward when close in
+                ideal_dist = 200  # A "comfortable" distance from center
+                spiral_strength = 0.08  
+                
+                # Tangential component (creates spiral)
+                tangential_angle = center_angle + math.pi/2
+                
+                # Radial component (toward or away from center)
+                radial_direction = 1 if current_dist < ideal_dist else -1
+                radial_strength = min(0.05, abs(current_dist - ideal_dist) / 1000)
+                
+                # Combined motion
+                acc1_x = (spiral_strength * math.cos(tangential_angle) + 
+                         radial_direction * radial_strength * math.cos(center_angle)) * TIME_SCALE
+                acc1_y = (spiral_strength * math.sin(tangential_angle) + 
+                         radial_direction * radial_strength * math.sin(center_angle)) * TIME_SCALE
+                
+            else:  # Rhythmic pulsation
+                # Standard direction with force that changes over time
+                acc1_x = acc1 * math.cos(angle)
+                acc1_y = acc1 * math.sin(angle)
+        else:
+            # Standard direction
+            acc1_x = acc1 * math.cos(angle)
+            acc1_y = acc1 * math.sin(angle)
+        
         vx1, vy1 = first.velocity
         first.velocity = (vx1 + acc1_x, vy1 + acc1_y)
         
-        # Second body (opposite direction)
+        # Second body (opposite direction for most physics modes)
         acc2 = force / second.mass
         # Limit maximum acceleration for numerical stability
-        acc2 = min(acc2, 0.5)  # Reduced from 2.0
+        acc2 = min(acc2, 0.5)  # Reduced for stability
         # Apply time scale to acceleration
         acc2 *= TIME_SCALE
-        acc2_x = acc2 * math.cos(angle + math.pi)  # Opposite direction
-        acc2_y = acc2 * math.sin(angle + math.pi)  # Opposite direction
+        
+        # Apply acceleration in appropriate direction (opposite of first body in most cases)
+        if self.alien_physics_enabled:
+            if physics_mode == 0:  # Magnetic field
+                # Standard opposite direction, force already accounts for sign
+                acc2_x = acc2 * math.cos(angle + math.pi)
+                acc2_y = acc2 * math.sin(angle + math.pi)
+                
+            elif physics_mode == 1:  # Orbital dance
+                # Perpendicular force in opposite direction
+                acc2_x = acc2 * math.cos(angle + math.pi)
+                acc2_y = acc2 * math.sin(angle + math.pi)
+                
+            elif physics_mode == 2 or physics_mode == 3:  # Vibration or Quantum
+                # Use standard direction, force already has sign
+                acc2_x = acc2 * math.cos(angle + math.pi)
+                acc2_y = acc2 * math.sin(angle + math.pi)
+                
+            elif physics_mode == 4:  # Choreographed orbits
+                # Apply a gentle choreographed movement
+                # Similar to first body but with different phase
+                
+                # Time-dependent pattern
+                time_factor = pygame.time.get_ticks() / 2000  # Slow rotation
+                
+                # Create a unique pattern factor for this body based on its mass
+                pattern_factor = (hash(str(second.mass)) % 5) / 5  # 0 to 0.8 in steps of 0.2
+                
+                # Calculate pattern movement with phase shift:
+                # 1. Circle pattern with radius proportional to mass
+                circle_radius = 0.1 * pattern_factor
+                circle_x = circle_radius * math.cos(time_factor + pattern_factor * 2 * math.pi + math.pi)  # Phase shift
+                circle_y = circle_radius * math.sin(time_factor + pattern_factor * 2 * math.pi + math.pi)  # Phase shift
+                
+                # 2. Figure-8 pattern
+                figure8_scale = 0.1 * (1 - pattern_factor)
+                figure8_x = figure8_scale * math.sin(time_factor * 2 + math.pi)
+                figure8_y = figure8_scale * math.sin(time_factor + math.pi) * math.cos(time_factor + math.pi)
+                
+                # Combine patterns
+                acc2_x = (circle_x + figure8_x) * TIME_SCALE
+                acc2_y = (circle_y + figure8_y) * TIME_SCALE
+                
+            elif physics_mode == 5:  # Spiral dance
+                # Create spiral-like motion, similar to first body but with parameter variations
+                current_dist = math.sqrt(second.position[0]**2 + second.position[1]**2)
+                
+                # Angle from center
+                center_angle = math.atan2(second.position[1], second.position[0])
+                
+                # Determine spiral direction based on distance
+                ideal_dist = 200  # A "comfortable" distance from center
+                spiral_strength = 0.08  
+                
+                # Tangential component (creates spiral)
+                tangential_angle = center_angle + math.pi/2
+                
+                # Radial component (toward or away from center)
+                radial_direction = 1 if current_dist < ideal_dist else -1
+                radial_strength = min(0.05, abs(current_dist - ideal_dist) / 1000)
+                
+                # Combined motion
+                acc2_x = (spiral_strength * math.cos(tangential_angle) + 
+                         radial_direction * radial_strength * math.cos(center_angle)) * TIME_SCALE
+                acc2_y = (spiral_strength * math.sin(tangential_angle) + 
+                         radial_direction * radial_strength * math.sin(center_angle)) * TIME_SCALE
+                
+            else:  # Rhythmic pulsation
+                # Standard direction with force that changes over time
+                acc2_x = acc2 * math.cos(angle + math.pi)
+                acc2_y = acc2 * math.sin(angle + math.pi)
+        else:
+            # Standard opposite direction
+            acc2_x = acc2 * math.cos(angle + math.pi)
+            acc2_y = acc2 * math.sin(angle + math.pi)
+        
         vx2, vy2 = second.velocity
         second.velocity = (vx2 + acc2_x, vy2 + acc2_y)
+        
+        # Apply velocity dampening in alien physics mode to prevent objects from flying away
+        if self.alien_physics_enabled:
+            # Limit maximum velocity for bodies in alien physics mode
+            max_velocity = 2.0  # Reduced from 5.0 for tighter containment
+            
+            # First body velocity limiting
+            v1_magnitude = math.sqrt(first.velocity[0]**2 + first.velocity[1]**2)
+            if v1_magnitude > max_velocity:
+                scale_factor = max_velocity / v1_magnitude
+                first.velocity = (first.velocity[0] * scale_factor, first.velocity[1] * scale_factor)
+                
+            # Second body velocity limiting
+            v2_magnitude = math.sqrt(second.velocity[0]**2 + second.velocity[1]**2)
+            if v2_magnitude > max_velocity:
+                scale_factor = max_velocity / v2_magnitude
+                second.velocity = (second.velocity[0] * scale_factor, second.velocity[1] * scale_factor)
+                
+            # Apply containment force to keep bodies within a reasonable distance from center
+            # This creates a "dance floor" effect where bodies can't stray too far
+            containment_radius = 500  # Maximum allowed distance from center
+            
+            # First body containment
+            first_dist_from_center = math.sqrt(first.position[0]**2 + first.position[1]**2)
+            if first_dist_from_center > containment_radius:
+                # Calculate angle from center to body
+                angle_to_center = math.atan2(first.position[1], first.position[0])
+                
+                # Apply inward force proportional to how far beyond the boundary
+                beyond_boundary = first_dist_from_center - containment_radius
+                containment_force = min(0.2, beyond_boundary / 100)  # Cap at 0.2 for stability
+                
+                # Add velocity component pointing back toward center
+                vx1, vy1 = first.velocity
+                first.velocity = (
+                    vx1 - containment_force * math.cos(angle_to_center) * TIME_SCALE,
+                    vy1 - containment_force * math.sin(angle_to_center) * TIME_SCALE
+                )
+                
+            # Second body containment
+            second_dist_from_center = math.sqrt(second.position[0]**2 + second.position[1]**2)
+            if second_dist_from_center > containment_radius:
+                # Calculate angle from center to body
+                angle_to_center = math.atan2(second.position[1], second.position[0])
+                
+                # Apply inward force proportional to how far beyond the boundary
+                beyond_boundary = second_dist_from_center - containment_radius
+                containment_force = min(0.2, beyond_boundary / 100)  # Cap at 0.2 for stability
+                
+                # Add velocity component pointing back toward center
+                vx2, vy2 = second.velocity
+                second.velocity = (
+                    vx2 - containment_force * math.cos(angle_to_center) * TIME_SCALE,
+                    vy2 - containment_force * math.sin(angle_to_center) * TIME_SCALE
+                )
     
     def check_collision(self, first, second):
         """Check if two bodies have collided."""
@@ -733,7 +1035,7 @@ def main():
     
     # Add font for instructions
     font = pygame.font.SysFont('Arial', 18)
-    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | C to toggle orbit correction | +/- to change speed | A to add asteroid | S to reset speed | T to toggle trails', True, WHITE)
+    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | C to toggle orbit correction | P to toggle alien physics | +/- to change speed | A to add asteroid | S to reset speed | T to toggle trails', True, WHITE)
     
     # Global for time scale
     global TIME_SCALE
@@ -758,6 +1060,12 @@ def main():
                 elif event.key == pygame.K_c:  # Toggle orbit correction with 'c' key
                     solar_system.orbit_correction_enabled = not solar_system.orbit_correction_enabled
                     print(f"Orbit correction: {'Enabled' if solar_system.orbit_correction_enabled else 'Disabled'}")
+                elif event.key == pygame.K_p:  # Toggle alien physics with 'p' key
+                    solar_system.alien_physics_enabled = not solar_system.alien_physics_enabled
+                    print(f"Alien physics: {'Enabled' if solar_system.alien_physics_enabled else 'Disabled'}")
+                    # If enabling alien physics, disable orbit correction for more interesting effects
+                    if solar_system.alien_physics_enabled:
+                        solar_system.orbit_correction_enabled = False
                 elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS or event.key == pygame.K_EQUALS:
                     # Increase speed - use larger multiplier at higher speeds
                     if TIME_SCALE < 1.0:
@@ -827,6 +1135,63 @@ def main():
         trails_color = (0, 255, 0) if solar_system.show_trails else (255, 50, 50)
         trails_display = font.render(trails_text, True, trails_color)
         screen.blit(trails_display, (10, 100))
+        
+        # Display alien physics status
+        alien_text = f"Alien Physics: {'ON' if solar_system.alien_physics_enabled else 'OFF'}"
+        # Use purple for alien physics to make it stand out
+        alien_color = (180, 100, 255) if solar_system.alien_physics_enabled else (255, 50, 50)
+        alien_display = font.render(alien_text, True, alien_color)
+        screen.blit(alien_display, (10, 130))
+        
+        # Display active physics modes if alien physics is enabled
+        if solar_system.alien_physics_enabled:
+            # Add explanation of alien physics
+            explanation_text = "Alien physics oscillates between modes every 10 seconds"
+            explanation_display = font.render(explanation_text, True, (150, 150, 150))
+            screen.blit(explanation_display, (10, 155))
+            
+            mode_names = [
+                "Magnetic Ballet",
+                "Orbital Waltz",
+                "Vibration Samba",
+                "Quantum Tango",
+                "Choreographed Orbits",
+                "Spiral Dance",
+                "Rhythmic Pulsation"
+            ]
+            
+            # Display currently active mode
+            current_mode = solar_system.current_physics_mode
+            current_mode_name = mode_names[current_mode]
+            
+            # Calculate time remaining in current mode
+            mode_duration = 10  # seconds (must match the value in calculate_gravity)
+            time_seconds = pygame.time.get_ticks() / 1000
+            time_in_current_mode = time_seconds % mode_duration
+            time_remaining = mode_duration - time_in_current_mode
+            
+            # Display current mode with time remaining
+            mode_colors = [
+                (255, 100, 100),  # Red for magnetic ballet
+                (100, 255, 100),  # Green for orbital waltz
+                (100, 100, 255),  # Blue for vibration samba
+                (255, 255, 100),  # Yellow for quantum tango
+                (255, 100, 255),  # Magenta for choreographed orbits
+                (255, 100, 100),  # Red for spiral dance
+                (100, 100, 255)   # Blue for rhythmic pulsation
+            ]
+            
+            mode_text = f"Current Mode: {current_mode_name} ({time_remaining:.1f}s remaining)"
+            mode_color = mode_colors[current_mode]
+            mode_display = font.render(mode_text, True, mode_color)
+            screen.blit(mode_display, (10, 180))
+            
+            # Display next mode
+            next_mode = (current_mode + 1) % 7
+            next_mode_name = mode_names[next_mode]
+            next_mode_text = f"Next Mode: {next_mode_name}"
+            next_mode_display = font.render(next_mode_text, True, (180, 180, 180))
+            screen.blit(next_mode_display, (10, 210))
         
         # Update display
         pygame.display.flip()
