@@ -52,6 +52,10 @@ NEPTUNE_COLOR = (41, 95, 153)    # Deep blue
 # Planet colors for random planets
 PLANET_COLORS = [RED, GREEN, BLUE]
 
+# Colors for celestial bodies
+ASTEROID_COLOR_BASE = (150, 140, 120)  # Brownish-gray
+ASTEROID_BELT_COLOR = (100, 100, 100)  # Dark gray for orbit paths
+
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
 FPS = 60
@@ -74,6 +78,10 @@ PLANET_NAME_MODIFIERS = [
     "Inferior", "Proxima", "Ultima", "Nova", "Maximus", "Minimus", "Secundus"
 ]
 
+# Global lists for random asteroids
+ASTEROID_NAME_PREFIXES = ["Ceres", "Vesta", "Pallas", "Juno", "Hygiea", "Ida", "Eros", "Gaspra"]
+ASTEROID_NAME_SUFFIXES = ["is", "oid", "ia", "us", "a", "e", "os", "ium", "onia"]
+
 def generate_random_planet_name():
     """Generate a random planet name using combinations of prefixes and suffixes."""
     name_type = random.randint(1, 3)
@@ -93,6 +101,15 @@ def generate_random_planet_name():
     # Sometimes add a number designation
     if random.random() < 0.3:  # 30% chance
         name += " " + str(random.randint(1, 999))
+    
+    return name
+
+def generate_random_asteroid_name():
+    """Generate a random asteroid name."""
+    if random.random() < 0.5:
+        name = random.choice(ASTEROID_NAME_PREFIXES) + random.choice(ASTEROID_NAME_SUFFIXES)
+    else:
+        name = random.choice(ASTEROID_NAME_PREFIXES) + "-" + str(random.randint(1, 9999))
     
     return name
 
@@ -184,6 +201,42 @@ class Planet(Body):
             )
             pygame.draw.ellipse(surface, self.ring_color, inner_rect, 1)
 
+class Asteroid(Body):
+    """An asteroid in the solar system."""
+    def __init__(self, mass, position=(0, 0), velocity=(0, 0), eccentricity=0.3):
+        """Initialize an asteroid with given properties and random color variation."""
+        # Create subtle color variation for asteroids
+        color_variation = random.uniform(-20, 20)
+        color = (
+            min(255, max(0, ASTEROID_COLOR_BASE[0] + color_variation)),
+            min(255, max(0, ASTEROID_COLOR_BASE[1] + color_variation)),
+            min(255, max(0, ASTEROID_COLOR_BASE[2] + color_variation))
+        )
+        super().__init__(mass, position, velocity, color)
+        self.eccentricity = eccentricity  # Orbit eccentricity (0 = circular, higher = more elliptical)
+        
+    def draw(self, surface):
+        """Draw the asteroid as a small irregular shape."""
+        x, y = self.position
+        screen_x = int(x + WIDTH // 2)
+        screen_y = int(y + HEIGHT // 2)
+        
+        # Draw a small dot for the asteroid
+        pygame.draw.circle(surface, self.color, (screen_x, screen_y), self.display_size)
+        
+        # Add a small irregular shape to make it look more like an asteroid
+        # Rather than a perfect circle
+        points = []
+        for i in range(5):  # Create a rough pentagon
+            angle = 2 * math.pi * i / 5 + random.uniform(-0.2, 0.2)
+            point_x = screen_x + math.cos(angle) * (self.display_size - 1)
+            point_y = screen_y + math.sin(angle) * (self.display_size - 1)
+            points.append((point_x, point_y))
+        
+        # Draw the irregular shape
+        if len(points) >= 3:  # Need at least 3 points for a polygon
+            pygame.draw.polygon(surface, self.color, points)
+
 class SolarSystem:
     """Manages all the bodies in the solar system and their interactions."""
     def __init__(self):
@@ -215,8 +268,37 @@ class SolarSystem:
     
     def remove_body(self, body):
         """Remove a body from the solar system."""
-        if body in self.bodies:
-            self.bodies.remove(body)
+        # Print information about the destroyed body
+        body_type = "Unknown"
+        if isinstance(body, Planet):
+            body_type = "Planet"
+        elif isinstance(body, Asteroid):
+            body_type = "Asteroid"
+        elif isinstance(body, Sun):
+            body_type = "Sun"
+            
+        # Get the body name if it exists
+        name = self.planet_names.get(body, "unnamed")
+        
+        print(f"🔥 {body_type} {name} was destroyed!")
+        
+        # Remove from planet names dictionary
+        if body in self.planet_names:
+            self.planet_names.pop(body)
+            
+        # Remove from trails dictionary
+        if body in self.planet_trails:
+            self.planet_trails.pop(body)
+            
+        # Remove from initial distances dictionary
+        if body in self.initial_distances:
+            self.initial_distances.pop(body)
+            
+        # Only call clear() if it's available (SolarSystemBody class from turtle)
+        if hasattr(body, 'clear'):
+            body.clear()
+        
+        self.bodies.remove(body)
     
     def update_all(self, surface):
         """Update and draw all bodies."""
@@ -317,12 +399,30 @@ class SolarSystem:
     
     def check_collision(self, first, second):
         """Check if two bodies have collided."""
+        # Skip collision check between two planets or two asteroids
+        if (isinstance(first, Planet) and isinstance(second, Planet)) or \
+           (isinstance(first, Asteroid) and isinstance(second, Asteroid)):
+            return
+        
         if first.distance_to(second) < first.display_size/2 + second.display_size/2:
-            # Only remove planets, not suns
-            if isinstance(first, Planet) and not isinstance(second, Planet):
-                self.remove_body(first)
-            elif isinstance(second, Planet) and not isinstance(first, Planet):
+            # Get names for better collision messages
+            first_name = self.planet_names.get(first, "unnamed")
+            second_name = self.planet_names.get(second, "unnamed")
+            
+            # Handle sun-planet and sun-asteroid collisions
+            if isinstance(first, Sun) and (isinstance(second, Planet) or isinstance(second, Asteroid)):
+                print(f"⚡ Collision detected: {first_name} destroyed {second_name}!")
                 self.remove_body(second)
+            elif isinstance(second, Sun) and (isinstance(first, Planet) or isinstance(first, Asteroid)):
+                print(f"⚡ Collision detected: {second_name} destroyed {first_name}!")
+                self.remove_body(first)
+            # Handle planet-asteroid collisions (asteroid gets absorbed)
+            elif isinstance(first, Planet) and isinstance(second, Asteroid):
+                print(f"💥 Collision detected: Planet {first_name} absorbed asteroid {second_name}!")
+                self.remove_body(second)
+            elif isinstance(first, Asteroid) and isinstance(second, Planet):
+                print(f"💥 Collision detected: Planet {second_name} absorbed asteroid {first_name}!")
+                self.remove_body(first)
     
     def handle_all_interactions(self):
         """Handle all gravitational interactions and collisions."""
@@ -438,6 +538,62 @@ def add_random_planet(solar_system, pos):
     
     solar_system.add_body(planet, planet_name)
 
+def add_elliptical_asteroid(solar_system, min_distance, max_distance, eccentricity=None):
+    """Add an asteroid with an elliptical orbit between min and max distance from the sun."""
+    # Find the sun
+    sun = None
+    for body in solar_system.bodies:
+        if isinstance(body, Sun):
+            sun = body
+            break
+    
+    if not sun:
+        print("Cannot add asteroid: No sun found in the solar system")
+        return
+    
+    # Random distance within the specified range
+    distance = random.uniform(min_distance, max_distance)
+    
+    # Random angle for position
+    angle = random.uniform(0, 2 * math.pi)
+    x = math.cos(angle) * distance
+    y = math.sin(angle) * distance
+    
+    # Calculate base orbital velocity for a circular orbit
+    orbital_speed = math.sqrt(sun.mass / distance) * 0.7
+    
+    # Generate random eccentricity if not specified
+    if eccentricity is None:
+        eccentricity = random.uniform(0.2, 0.7)  # Higher values = more elliptical
+    
+    # Modify velocity direction to create an elliptical orbit
+    # For an elliptical orbit, we add a radial component to the velocity
+    tangent_angle = angle + math.pi/2  # Perpendicular to radius (for circular orbit)
+    
+    # Adjust the velocity angle based on eccentricity
+    # This creates a velocity that's not perfectly perpendicular to radius vector
+    velocity_angle = tangent_angle + (random.choice([-1, 1]) * eccentricity * math.pi/4)
+    
+    # Calculate velocity components
+    vx = math.cos(velocity_angle) * orbital_speed
+    vy = math.sin(velocity_angle) * orbital_speed
+    
+    # Generate a small random mass for the asteroid
+    mass = random.uniform(0.01, 0.1)
+    
+    # Create and add the asteroid
+    asteroid = Asteroid(mass, (x, y), (vx, vy), eccentricity)
+    
+    # Asteroids are small, so set a fixed small size
+    asteroid.display_size = random.randint(1, 3)
+    
+    # Generate a name for the asteroid
+    asteroid_name = generate_random_asteroid_name()
+    print(f"Added asteroid: {asteroid_name}, eccentricity: {eccentricity:.2f}")
+    
+    solar_system.add_body(asteroid, asteroid_name)
+    return asteroid
+
 def main():
     # Create solar system
     solar_system = SolarSystem()
@@ -530,9 +686,19 @@ def main():
         # Debug info
         print(f"Added {name}: distance={distance}, mass={mass}, size={planet.display_size}, orbital speed={orbital_speed:.2f}")
     
+    # Add asteroid belt between Mars and Jupiter
+    num_asteroids = 15  # Number of asteroids to add
+    for _ in range(num_asteroids):
+        # Asteroid belt is roughly between Mars and Jupiter
+        add_elliptical_asteroid(solar_system, 220, 260, None)
+    
+    # Add some outlier asteroids with more extreme elliptical orbits
+    add_elliptical_asteroid(solar_system, 180, 300, 0.6)  # Highly elliptical
+    add_elliptical_asteroid(solar_system, 150, 350, 0.7)  # Very elliptical
+    
     # Add font for instructions
     font = pygame.font.SysFont('Arial', 18)
-    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | +/- to change speed', True, WHITE)
+    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | +/- to change speed | A to add asteroid', True, WHITE)
     
     # Global for time scale
     global TIME_SCALE
@@ -558,6 +724,11 @@ def main():
                     # Decrease speed
                     TIME_SCALE = max(TIME_SCALE * 0.8, 0.01)
                     print(f"Speed: {TIME_SCALE:.2f}x")
+                elif event.key == pygame.K_a:  # 'A' key to add random asteroid
+                    # Add a random asteroid with elliptical orbit
+                    min_distance = 120  # Min distance from sun
+                    max_distance = 400  # Max distance from sun
+                    add_elliptical_asteroid(solar_system, min_distance, max_distance)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left mouse button
                     add_random_planet(solar_system, event.pos)
