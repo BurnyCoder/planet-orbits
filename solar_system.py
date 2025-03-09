@@ -31,30 +31,30 @@ GRAVITY_STRENGTH = 0.5  # Reduced from implicit 1.0
 DISTANCE_DAMPING = 10.0  # Higher value reduces gravitational force at close distances
 ORBIT_CORRECTION = 0.02  # Increased from 0.01 for better stability
 
-# Colors
-BLACK = (0, 0, 0)
-YELLOW = (255, 255, 0)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
-WHITE = (255, 255, 255)
+# Define colors with alpha channel
+BLACK = (0, 0, 0, 255)  # Fully opaque black
+YELLOW = (255, 255, 0, 128)  # Semi-transparent yellow
+RED = (255, 0, 0, 128)  # Semi-transparent red
+GREEN = (0, 255, 0, 128)  # Semi-transparent green
+BLUE = (0, 0, 255, 128)  # Semi-transparent blue
+WHITE = (255, 255, 255, 128)  # Semi-transparent white
 
-# Planet colors (more realistic)
-MERCURY_COLOR = (169, 169, 169)  # Gray
-VENUS_COLOR = (244, 226, 181)    # Pale yellow/cream
-EARTH_COLOR = (0, 128, 255)      # Blue
-MARS_COLOR = (188, 39, 50)       # Red-brown
-JUPITER_COLOR = (255, 196, 148)  # Light orange
-SATURN_COLOR = (236, 205, 151)   # Pale gold
-URANUS_COLOR = (172, 230, 236)   # Pale cyan
-NEPTUNE_COLOR = (41, 95, 153)    # Deep blue
+# Planet colors with alpha
+MERCURY_COLOR = (169, 169, 169, 128)  # Gray
+VENUS_COLOR = (244, 226, 181, 128)    # Pale yellow/cream
+EARTH_COLOR = (0, 128, 255, 128)      # Blue
+MARS_COLOR = (188, 39, 50, 128)       # Red-brown
+JUPITER_COLOR = (255, 196, 148, 128)  # Light orange
+SATURN_COLOR = (236, 205, 151, 128)   # Pale gold
+URANUS_COLOR = (172, 230, 236, 128)   # Pale cyan
+NEPTUNE_COLOR = (41, 95, 153, 128)    # Deep blue
 
 # Planet colors for random planets
 PLANET_COLORS = [RED, GREEN, BLUE]
 
-# Colors for celestial bodies
-ASTEROID_COLOR_BASE = (150, 140, 120)  # Brownish-gray
-ASTEROID_BELT_COLOR = (100, 100, 100)  # Dark gray for orbit paths
+# Asteroid colors with alpha
+ASTEROID_COLOR_BASE = (150, 140, 120, 128)  # Brownish-gray
+ASTEROID_BELT_COLOR = (100, 100, 100, 128)  # Dark gray for orbit paths
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
@@ -369,11 +369,17 @@ class SolarSystem:
                 
                 # Create a small font for the planet names
                 font = pygame.font.SysFont('Arial', 12)
-                # Render the name in white
+                # Render the name with white
                 text = font.render(self.planet_names[body], True, WHITE)
+                
+                # Create a transparent surface for the text
+                label_surface = pygame.Surface(text.get_size(), pygame.SRCALPHA)
+                label_surface.set_alpha(128)
+                label_surface.blit(text, (0, 0))
+                
                 # Position the text just above the planet
-                text_rect = text.get_rect(center=(screen_x, screen_y - body.display_size - 5))
-                surface.blit(text, text_rect)
+                text_rect = label_surface.get_rect(center=(screen_x, screen_y - body.display_size - 5))
+                surface.blit(label_surface, text_rect)
     
     def calculate_gravity(self, first, second):
         """Calculate gravitational effect between two bodies."""
@@ -851,16 +857,32 @@ class SolarSystem:
         
         # Display a header for the log section if there are any messages
         if self.message_log:
+            # Create text with transparency
             log_header = font.render("Event Log:", True, (200, 200, 200))
-            surface.blit(log_header, (start_x, header_y))
+            # Create a surface with per-pixel alpha
+            header_surface = pygame.Surface(log_header.get_size(), pygame.SRCALPHA)
+            # Set transparency (128 = semi-transparent)
+            header_surface.set_alpha(128)
+            # Blit the text onto the transparent surface
+            header_surface.blit(log_header, (0, 0))
+            # Blit the transparent surface onto the main surface
+            surface.blit(header_surface, (start_x, header_y))
             
             # Start displaying messages below the header
             message_y = header_y + 25
             
             # Display each message with its color
             for message, color in self.message_log:
+                # Create text with the specified color
                 message_display = font.render(message, True, color)
-                surface.blit(message_display, (start_x, message_y))
+                # Create a surface with per-pixel alpha
+                message_surface = pygame.Surface(message_display.get_size(), pygame.SRCALPHA)
+                # Set transparency (128 = semi-transparent)
+                message_surface.set_alpha(128)
+                # Blit the text onto the transparent surface
+                message_surface.blit(message_display, (0, 0))
+                # Blit the transparent surface onto the main surface
+                surface.blit(message_surface, (start_x, message_y))
                 message_y += 20  # Spacing between messages
 
 def add_random_planet(solar_system, pos):
@@ -1207,50 +1229,81 @@ def main():
         # Draw instructions (split into two lines)
         instruction_text1 = font.render("Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle orbit correction", True, (200, 200, 200))
         instruction_text2 = font.render("P: Toggle alien physics | A: Add asteroid | +/-: Change speed | S: Reset speed | T: Toggle trails", True, (200, 200, 200))
-        screen.blit(instruction_text1, (10, 10))
-        screen.blit(instruction_text2, (10, 35))
+        
+        # Create transparent surfaces
+        text_surface1 = pygame.Surface(instruction_text1.get_size(), pygame.SRCALPHA)
+        text_surface1.set_alpha(128)
+        text_surface1.blit(instruction_text1, (0, 0))
+        
+        text_surface2 = pygame.Surface(instruction_text2.get_size(), pygame.SRCALPHA)
+        text_surface2.set_alpha(128)
+        text_surface2.blit(instruction_text2, (0, 0))
+        
+        # Blit the transparent surfaces
+        screen.blit(text_surface1, (10, 10))
+        screen.blit(text_surface2, (10, 35))
         
         # Display current speed with appropriate formatting for large values
         speed_text = ""
-        if TIME_SCALE < 100:
+        if TIME_SCALE < 5:
             speed_text = f"Speed: {TIME_SCALE:.2f}x"
+            speed_color = (255, 255, 255)
+        elif TIME_SCALE < 10:
+            speed_text = f"Speed: {TIME_SCALE:.2f}x"
+            speed_color = (255, 150, 0)
         else:
-            speed_text = f"Speed: {int(TIME_SCALE)}x"
+            speed_text = f"Speed: {TIME_SCALE:.2f}x"
+            speed_color = (255, 50, 50)
         
-        speed_color = WHITE
-        if TIME_SCALE > 20:
-            speed_color = (255, 150, 0)  # Orange for high speeds
-        if TIME_SCALE > 100:
-            speed_color = (255, 50, 50)  # Red for very high speeds
-            
+        # Create transparent speed display
         speed_display = font.render(speed_text, True, speed_color)
-        screen.blit(speed_display, (10, 65))  # Adjust position to account for second line
+        speed_surface = pygame.Surface(speed_display.get_size(), pygame.SRCALPHA)
+        speed_surface.set_alpha(128)
+        speed_surface.blit(speed_display, (0, 0))
+        screen.blit(speed_surface, (10, 60))
         
         # Display orbit correction status
-        orbit_correction_text = f"Orbit Correction: {'ON' if solar_system.orbit_correction_enabled else 'OFF'}"
+        orbit_correction_text = f"Orbit Correction: {'On' if solar_system.orbit_correction_enabled else 'Off'}"
         orbit_correction_color = (0, 255, 0) if solar_system.orbit_correction_enabled else (255, 50, 50)
-        orbit_correction_display = font.render(orbit_correction_text, True, orbit_correction_color)
-        screen.blit(orbit_correction_display, (10, 95))  # Adjust position
         
-        # Display trails status
-        trails_text = f"Orbit Trails: {'ON' if solar_system.show_trails else 'OFF'}"
+        # Create transparent orbit correction display
+        orbit_correction_display = font.render(orbit_correction_text, True, orbit_correction_color)
+        orbit_surface = pygame.Surface(orbit_correction_display.get_size(), pygame.SRCALPHA)
+        orbit_surface.set_alpha(128)
+        orbit_surface.blit(orbit_correction_display, (0, 0))
+        screen.blit(orbit_surface, (10, 85))
+        
+        # Display orbit trails status
+        trails_text = f"Orbit Trails: {'On' if solar_system.show_trails else 'Off'}"
         trails_color = (0, 255, 0) if solar_system.show_trails else (255, 50, 50)
+        
+        # Create transparent trails display
         trails_display = font.render(trails_text, True, trails_color)
-        screen.blit(trails_display, (10, 125))  # Adjust position
+        trails_surface = pygame.Surface(trails_display.get_size(), pygame.SRCALPHA)
+        trails_surface.set_alpha(128)
+        trails_surface.blit(trails_display, (0, 0))
+        screen.blit(trails_surface, (10, 110))
         
         # Display alien physics status
-        alien_text = f"Alien Physics: {'ON' if solar_system.alien_physics_enabled else 'OFF'}"
-        # Use purple for alien physics to make it stand out
+        alien_text = f"Alien Physics: {'On' if solar_system.alien_physics_enabled else 'Off'}"
         alien_color = (180, 100, 255) if solar_system.alien_physics_enabled else (255, 50, 50)
+        
+        # Create transparent alien physics display
         alien_display = font.render(alien_text, True, alien_color)
-        screen.blit(alien_display, (10, 155))  # Adjust position
+        alien_surface = pygame.Surface(alien_display.get_size(), pygame.SRCALPHA)
+        alien_surface.set_alpha(128)
+        alien_surface.blit(alien_display, (0, 0))
+        screen.blit(alien_surface, (10, 135))
         
         # Display active physics modes if alien physics is enabled
         if solar_system.alien_physics_enabled:
             # Add explanation of alien physics
             explanation_text = "Alien physics oscillates between modes every 10 seconds"
             explanation_display = font.render(explanation_text, True, (150, 150, 150))
-            screen.blit(explanation_display, (10, 180))
+            explanation_surface = pygame.Surface(explanation_display.get_size(), pygame.SRCALPHA)
+            explanation_surface.set_alpha(128)
+            explanation_surface.blit(explanation_display, (0, 0))
+            screen.blit(explanation_surface, (10, 180))
             
             mode_names = [
                 "Magnetic Ballet",
@@ -1285,15 +1338,25 @@ def main():
             
             mode_text = f"Current Mode: {current_mode_name} ({time_remaining:.1f}s remaining)"
             mode_color = mode_colors[current_mode]
+            
+            # Create transparent mode display
             mode_display = font.render(mode_text, True, mode_color)
-            screen.blit(mode_display, (10, 205))  # Adjust position
+            mode_surface = pygame.Surface(mode_display.get_size(), pygame.SRCALPHA)
+            mode_surface.set_alpha(128)
+            mode_surface.blit(mode_display, (0, 0))
+            screen.blit(mode_surface, (10, 205))  # Adjust position
             
             # Display next mode
             next_mode = (current_mode + 1) % 7
             next_mode_name = mode_names[next_mode]
             next_mode_text = f"Next Mode: {next_mode_name}"
+            
+            # Create transparent next mode display
             next_mode_display = font.render(next_mode_text, True, (180, 180, 180))
-            screen.blit(next_mode_display, (10, 235))  # Adjust position
+            next_mode_surface = pygame.Surface(next_mode_display.get_size(), pygame.SRCALPHA)
+            next_mode_surface.set_alpha(128)
+            next_mode_surface.blit(next_mode_display, (0, 0))
+            screen.blit(next_mode_surface, (10, 235))  # Adjust position
         
         # Display message log in the bottom left corner
         solar_system.display_message_log(screen, font, 10, HEIGHT - 150)
