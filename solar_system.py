@@ -115,12 +115,15 @@ class SolarSystem:
             return
         
         # Calculate force based on masses and distance
-        force = first.mass * second.mass / (distance * distance)
+        # Adding a small constant to prevent extreme forces at very close distances
+        force = first.mass * second.mass / (distance * distance + 1.0)
         angle = first.angle_to(second)
         
         # Apply acceleration to both bodies in opposite directions
         # First body
         acc1 = force / first.mass
+        # Limit maximum acceleration for numerical stability
+        acc1 = min(acc1, 2.0)  
         acc1_x = acc1 * math.cos(angle)
         acc1_y = acc1 * math.sin(angle)
         vx1, vy1 = first.velocity
@@ -128,6 +131,8 @@ class SolarSystem:
         
         # Second body (opposite direction)
         acc2 = force / second.mass
+        # Limit maximum acceleration for numerical stability
+        acc2 = min(acc2, 2.0)
         acc2_x = acc2 * math.cos(angle + math.pi)  # Opposite direction
         acc2_y = acc2 * math.sin(angle + math.pi)  # Opposite direction
         vx2, vy2 = second.velocity
@@ -163,13 +168,31 @@ def add_random_planet(solar_system, pos):
     if distance < 50:  # Too close to center
         return
     
-    # Calculate velocity perpendicular to radius for stable orbit
-    speed = 6  # Adjust for different orbital behavior
-    vx = y / distance * speed
-    vy = -x / distance * speed
+    # Find the sun to calculate appropriate orbital velocity
+    sun = None
+    for body in solar_system.bodies:
+        if isinstance(body, Sun):
+            sun = body
+            break
     
-    # Random mass between 1 and 3
-    mass = random.uniform(1, 3)
+    if sun:
+        # Calculate velocity based on Kepler's laws for a circular orbit
+        # v = sqrt(GM/r) where G is absorbed into the sun's mass
+        orbital_speed = math.sqrt(sun.mass / distance) * 0.9  # Scale factor for stable orbits
+        
+        # Calculate velocity perpendicular to radius vector for circular orbit
+        # We normalize the (x,y) vector to get the direction, then rotate 90 degrees
+        # Rotating (x,y) by 90 degrees gives (-y,x) when normalized
+        vx = -y / distance * orbital_speed
+        vy = x / distance * orbital_speed
+    else:
+        # Fallback if no sun is found (should not happen)
+        orbital_speed = 5
+        vx = -y / distance * orbital_speed
+        vy = x / distance * orbital_speed
+    
+    # Random mass between 1 and 2 (smaller range for stability)
+    mass = random.uniform(1, 2)
     
     # Create and add the planet
     planet = Planet(mass, (x, y), (vx, vy))
@@ -183,19 +206,26 @@ def main():
     sun = Sun(10000)
     solar_system.add_body(sun)
     
-    # Add some initial planets
-    for _ in range(4):
+    # Add some initial planets at different distances with stable orbits
+    orbit_distances = [150, 220, 300, 380]
+    
+    for distance in orbit_distances:
+        # Random angle for position
         angle = random.uniform(0, 2 * math.pi)
-        distance = random.uniform(200, 400)
         x = math.cos(angle) * distance
         y = math.sin(angle) * distance
         
-        # Calculate orbit velocity (perpendicular to radius)
-        speed = math.sqrt(sun.mass / distance) * 0.7  # Adjusted for stability
-        vx = math.sin(angle) * speed
-        vy = -math.cos(angle) * speed
+        # Calculate orbital velocity based on Kepler's laws
+        # v = sqrt(GM/r) where G is absorbed into the sun's mass
+        orbital_speed = math.sqrt(sun.mass / distance) * 0.9  # Scale factor for stability
         
-        planet = Planet(random.uniform(1, 5), (x, y), (vx, vy))
+        # Velocity perpendicular to radius vector (for circular orbit)
+        vx = -y / distance * orbital_speed 
+        vy = x / distance * orbital_speed
+        
+        # Create planet with consistent mass (smaller masses are more stable)
+        mass = random.uniform(1, 2)
+        planet = Planet(mass, (x, y), (vx, vy))
         solar_system.add_body(planet)
     
     # Add font for instructions
