@@ -245,6 +245,7 @@ class SolarSystem:
         self.show_orbits = True  # Flag to show orbit paths
         self.planet_trails = {}  # Dictionary to store planet trail points
         self.initial_distances = {}  # Store initial distances from sun for orbit correction
+        self.orbit_correction_enabled = True  # Flag to toggle orbit correction
     
     def add_body(self, body, name=None):
         """Add a body to the solar system."""
@@ -436,46 +437,47 @@ class SolarSystem:
                 self.check_collision(first, second)
         
         # Then apply orbit correction to maintain stable circular orbits
-        sun = None
-        for body in bodies:
-            if isinstance(body, Sun):
-                sun = body
-                break
-        
-        if sun:
+        if self.orbit_correction_enabled:
+            sun = None
             for body in bodies:
-                if isinstance(body, Planet) and body in self.initial_distances:
-                    # Get the initial distance (ideal orbit)
-                    ideal_distance = self.initial_distances[body]
-                    
-                    # Get current distance from sun
-                    current_distance = body.distance_to(sun)
-                    
-                    # Skip if distances are close enough
-                    if abs(current_distance - ideal_distance) < 0.5:
-                        continue
-                    
-                    # Calculate angle to sun
-                    angle_to_sun = body.angle_to(sun)
-                    
-                    # Calculate correction force vector direction
-                    # If too close, force should push away from sun
-                    # If too far, force should pull toward sun
-                    if current_distance < ideal_distance:
-                        # Push away from sun
-                        correction_angle = angle_to_sun + math.pi
-                        # Apply stronger correction when too close to prevent collisions
-                        correction_strength = abs(current_distance - ideal_distance) * ORBIT_CORRECTION * 2.0
-                    else:
-                        # Pull toward sun
-                        correction_angle = angle_to_sun
-                        correction_strength = abs(current_distance - ideal_distance) * ORBIT_CORRECTION
-                    
-                    # Apply correction force to velocity
-                    vx, vy = body.velocity
-                    vx += correction_strength * math.cos(correction_angle) * TIME_SCALE
-                    vy += correction_strength * math.sin(correction_angle) * TIME_SCALE
-                    body.velocity = (vx, vy)
+                if isinstance(body, Sun):
+                    sun = body
+                    break
+            
+            if sun:
+                for body in bodies:
+                    if isinstance(body, Planet) and body in self.initial_distances:
+                        # Get the initial distance (ideal orbit)
+                        ideal_distance = self.initial_distances[body]
+                        
+                        # Get current distance from sun
+                        current_distance = body.distance_to(sun)
+                        
+                        # Skip if distances are close enough
+                        if abs(current_distance - ideal_distance) < 0.5:
+                            continue
+                        
+                        # Calculate angle to sun
+                        angle_to_sun = body.angle_to(sun)
+                        
+                        # Calculate correction force vector direction
+                        # If too close, force should push away from sun
+                        # If too far, force should pull toward sun
+                        if current_distance < ideal_distance:
+                            # Push away from sun
+                            correction_angle = angle_to_sun + math.pi
+                            # Apply stronger correction when too close to prevent collisions
+                            correction_strength = abs(current_distance - ideal_distance) * ORBIT_CORRECTION * 2.0
+                        else:
+                            # Pull toward sun
+                            correction_angle = angle_to_sun
+                            correction_strength = abs(current_distance - ideal_distance) * ORBIT_CORRECTION
+                        
+                        # Apply correction force to velocity
+                        vx, vy = body.velocity
+                        vx += correction_strength * math.cos(correction_angle) * TIME_SCALE
+                        vy += correction_strength * math.sin(correction_angle) * TIME_SCALE
+                        body.velocity = (vx, vy)
 
 def add_random_planet(solar_system, pos):
     """Add a planet at the given position with appropriate velocity and a random name."""
@@ -721,7 +723,7 @@ def main():
     
     # Add font for instructions
     font = pygame.font.SysFont('Arial', 18)
-    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | +/- to change speed | A to add asteroid | S to reset speed', True, WHITE)
+    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | C to toggle orbit correction | +/- to change speed | A to add asteroid | S to reset speed', True, WHITE)
     
     # Global for time scale
     global TIME_SCALE
@@ -739,6 +741,9 @@ def main():
                     running = False
                 elif event.key == pygame.K_o:  # Toggle orbits with 'o' key
                     solar_system.show_orbits = not solar_system.show_orbits
+                elif event.key == pygame.K_c:  # Toggle orbit correction with 'c' key
+                    solar_system.orbit_correction_enabled = not solar_system.orbit_correction_enabled
+                    print(f"Orbit correction: {'Enabled' if solar_system.orbit_correction_enabled else 'Disabled'}")
                 elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS or event.key == pygame.K_EQUALS:
                     # Increase speed - use larger multiplier at higher speeds
                     if TIME_SCALE < 1.0:
@@ -796,6 +801,12 @@ def main():
             
         speed_display = font.render(speed_text, True, speed_color)
         screen.blit(speed_display, (10, 40))
+        
+        # Display orbit correction status
+        orbit_correction_text = f"Orbit Correction: {'ON' if solar_system.orbit_correction_enabled else 'OFF'}"
+        orbit_correction_color = (0, 255, 0) if solar_system.orbit_correction_enabled else (255, 50, 50)
+        orbit_correction_display = font.render(orbit_correction_text, True, orbit_correction_color)
+        screen.blit(orbit_correction_display, (10, 70))
         
         # Update display
         pygame.display.flip()
