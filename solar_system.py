@@ -274,19 +274,17 @@ class SolarSystem:
     
     def remove_body(self, body):
         """Remove a body from the solar system."""
-        # Print information about the destroyed body
-        body_type = "Unknown"
-        if isinstance(body, Planet):
-            body_type = "Planet"
-        elif isinstance(body, Asteroid):
-            body_type = "Asteroid"
-        elif isinstance(body, Sun):
-            body_type = "Sun"
-            
         # Get the body name if it exists
         name = self.planet_names.get(body, "unnamed")
         
-        print(f"🔥 {body_type} {name} was destroyed!")
+        # Log removal with appropriate body type
+        body_type = "Body"
+        if isinstance(body, Sun): body_type = "Sun"
+        elif isinstance(body, Planet): body_type = "Planet"
+        elif isinstance(body, Asteroid): body_type = "Asteroid"
+        
+        # Print log message 
+        print(f"{body_type} {name} was destroyed!")
         
         # Remove from planet names dictionary
         if body in self.planet_names:
@@ -755,20 +753,20 @@ class SolarSystem:
             
             # Handle sun-planet and sun-asteroid collisions
             if isinstance(first, Sun) and (isinstance(second, Planet) or isinstance(second, Asteroid)):
-                message = f"⚡ {first_name} destroyed {second_name}!"
+                message = f"{first_name} destroyed {second_name}!"
                 self.add_message(message, (255, 200, 0))  # Yellow-orange for sun destruction
                 self.remove_body(second)
             elif isinstance(second, Sun) and (isinstance(first, Planet) or isinstance(first, Asteroid)):
-                message = f"⚡ {second_name} destroyed {first_name}!"
+                message = f"{second_name} destroyed {first_name}!"
                 self.add_message(message, (255, 200, 0))  # Yellow-orange for sun destruction
                 self.remove_body(first)
             # Handle planet-asteroid collisions (asteroid gets absorbed)
             elif isinstance(first, Planet) and isinstance(second, Asteroid):
-                message = f"💥 Planet {first_name} absorbed asteroid {second_name}!"
+                message = f"Planet {first_name} absorbed asteroid {second_name}!"
                 self.add_message(message, (150, 255, 150))  # Light green for absorption
                 self.remove_body(second)
             elif isinstance(first, Asteroid) and isinstance(second, Planet):
-                message = f"💥 Planet {second_name} absorbed asteroid {first_name}!"
+                message = f"Planet {second_name} absorbed asteroid {first_name}!"
                 self.add_message(message, (150, 255, 150))  # Light green for absorption
                 self.remove_body(first)
     
@@ -925,7 +923,7 @@ def add_random_planet(solar_system, pos):
     
     # Add the planet to the system and log the event
     solar_system.add_body(planet, planet_name)
-    solar_system.add_message(f"🪐 New planet {planet_name} added at distance {distance:.1f}", (100, 200, 255))
+    solar_system.add_message(f"New planet {planet_name} added at distance {distance:.1f}", (100, 200, 255))
     
     return planet, planet_name
 
@@ -983,7 +981,7 @@ def add_elliptical_asteroid(solar_system, min_distance, max_distance, eccentrici
     
     # Add to solar system and log the event
     solar_system.add_body(asteroid, asteroid_name)
-    solar_system.add_message(f"☄️ New asteroid {asteroid_name} added, eccentricity: {eccentricity:.2f}", (200, 200, 200))
+    solar_system.add_message(f"New asteroid {asteroid_name} added, eccentricity: {eccentricity:.2f}", (200, 200, 200))
     
     return asteroid, asteroid_name
 
@@ -992,7 +990,7 @@ def main():
     solar_system = SolarSystem()
     
     # Add welcome messages
-    solar_system.add_message("🚀 Welcome to the Solar System Simulator!", (255, 255, 100))
+    solar_system.add_message("Welcome to the Solar System Simulator!", (255, 255, 100))
     solar_system.add_message("Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle orbit correction", (200, 200, 200))
     solar_system.add_message("P: Toggle alien physics | A: Add asteroid | +/-: Change speed | S: Reset speed | T: Toggle trails", (200, 200, 200))
     
@@ -1000,7 +998,7 @@ def main():
     sun = Sun(10000)  # Large mass for stable orbits
     sun.display_size = 50  # Fixed display size for sun
     solar_system.add_body(sun, "Sun")
-    solar_system.add_message("☀️ Sun created at the center", (255, 200, 0))
+    solar_system.add_message("Sun created at the center", (255, 200, 0))
     
     # Scale down the distance values to fit all planets on screen
     # Maintain the same relative distances between planets but reduce absolute distances
