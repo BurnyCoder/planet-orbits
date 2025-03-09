@@ -348,10 +348,10 @@ def add_random_planet(solar_system, pos):
     distance = math.sqrt(x*x + y*y)
     
     # Enforce minimum distance from sun
-    if distance < 100:  # Increased from 50
+    if distance < 70:  # Reduced from 100 to match new scale
         # Too close to center - place it at minimum distance in same direction
         angle = math.atan2(y, x)
-        distance = 100
+        distance = 70
         x = math.cos(angle) * distance
         y = math.sin(angle) * distance
     
@@ -402,20 +402,22 @@ def main():
     sun.display_size = 50  # Fixed size for sun
     solar_system.add_body(sun, "Sun")
     
+    # Scale down the distance values to fit all planets on screen
+    # Maintain the same relative distances between planets but reduce absolute distances
+    
     # Define planet data for our solar system with improved spacing
     # Format: name, distance from sun, mass, color, size_scale, has_rings
-    # Distances are increased to provide more space between planets
     # Using a more logarithmic scale for distances to better represent the solar system
     planets_data = [
         # Name       Distance  Mass    Color           Size Scale  Rings
-        ("Mercury",  120,      0.055,  MERCURY_COLOR,  0.38,       False),
-        ("Venus",    180,      0.815,  VENUS_COLOR,    0.95,       False),
-        ("Earth",    250,      1.0,    EARTH_COLOR,    1.0,        False),
-        ("Mars",     320,      0.107,  MARS_COLOR,     0.53,       False),
-        ("Jupiter",  450,      317.8,  JUPITER_COLOR,  11.2,       False),
-        ("Saturn",   550,      95.2,   SATURN_COLOR,   9.45,       True),
-        ("Uranus",   650,      14.6,   URANUS_COLOR,   4.0,        False),
-        ("Neptune",  750,      17.2,   NEPTUNE_COLOR,  3.88,       False)
+        ("Mercury",  80,       0.055,  MERCURY_COLOR,  0.38,       False),
+        ("Venus",    120,      0.815,  VENUS_COLOR,    0.95,       False),
+        ("Earth",    160,      1.0,    EARTH_COLOR,    1.0,        False),
+        ("Mars",     200,      0.107,  MARS_COLOR,     0.53,       False),
+        ("Jupiter",  280,      317.8,  JUPITER_COLOR,  11.2,       False),
+        ("Saturn",   350,      95.2,   SATURN_COLOR,   9.45,       True),
+        ("Uranus",   420,      14.6,   URANUS_COLOR,   4.0,        False),
+        ("Neptune",  480,      17.2,   NEPTUNE_COLOR,  3.88,       False)
     ]
     
     # Base size for Earth - everything else will be relative to this
