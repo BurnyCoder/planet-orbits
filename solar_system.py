@@ -425,7 +425,7 @@ class SolarSystem:
                 ]
                 
                 # Log the mode change with the color of the new mode
-                self.add_message(f"🔄 Physics mode changed to: {mode_names[current_mode]}", mode_colors[current_mode])
+                self.add_message(f"Physics mode changed to: {mode_names[current_mode]}", mode_colors[current_mode])
             
             # Store the current mode for display
             self.current_physics_mode = current_mode
@@ -1177,7 +1177,7 @@ def main():
                     # If enabling alien physics, disable orbit correction for more interesting effects
                     if solar_system.alien_physics_enabled:
                         solar_system.orbit_correction_enabled = False
-                        solar_system.add_message(f"🌌 Alien physics: {status} (orbit correction disabled)", (180, 100, 255))
+                        solar_system.add_message(f"Alien physics: {status} (orbit correction disabled)", (180, 100, 255))
                     else:
                         solar_system.add_message(f"Alien physics: {status}", (150, 150, 150))
                     
