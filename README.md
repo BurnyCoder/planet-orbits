@@ -39,7 +39,7 @@ This project simulates planets orbiting in a solar system using Python and Pygam
 - **ESC key**: Quit the simulation
 - **O key**: Toggle orbit display
 - **T key**: Toggle orbit trails
-- **C key**: Toggle orbit correction
+- **C key**: Toggle circular orbit enforcement
 - **P key**: Toggle alien physics mode
 - **A key**: Add asteroid with elliptical orbit
 - **+/- keys**: Change simulation speed

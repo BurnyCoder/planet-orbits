@@ -245,8 +245,8 @@ class SolarSystem:
         self.show_orbits = True  # Flag to show orbit paths
         self.show_trails = True  # Flag to show celestial body trails
         self.body_trails = {}  # Dictionary to store body trail points
-        self.initial_distances = {}  # Store initial distances from sun for orbit correction
-        self.orbit_correction_enabled = True  # Flag to toggle orbit correction
+        self.initial_distances = {}  # Store initial distances from sun for enforcing circular orbits
+        self.enforce_circular_orbit_enabled = True  # Flag to toggle enforcing circular orbits
         self.alien_physics_enabled = False  # Flag to toggle alien physics mode
         self.current_physics_mode = 0  # Track the current physics mode for oscillation
         self.message_log = []  # List to store game messages for display
@@ -261,7 +261,7 @@ class SolarSystem:
             if isinstance(body, Planet) or isinstance(body, Asteroid):
                 self.body_trails[body] = []
                 
-                # Store initial distance from sun for orbit correction
+                # Store initial distance from sun for enforcing circular orbits
                 sun = None
                 for b in self.bodies:
                     if isinstance(b, Sun):
@@ -799,8 +799,8 @@ class SolarSystem:
                 self.calculate_gravity(first, second)
                 self.check_collision(first, second)
         
-        # Then apply orbit correction to maintain stable circular orbits
-        if self.orbit_correction_enabled:
+        # Then apply circular orbit enforcement to maintain stable circular orbits
+        if self.enforce_circular_orbit_enabled:
             sun = None
             for body in bodies:
                 if isinstance(body, Sun):
@@ -1025,7 +1025,7 @@ def main():
     
     # Add welcome messages
     solar_system.add_message("Welcome to the Solar System Simulator!", (255, 255, 100))
-    solar_system.add_message("Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle orbit correction", (200, 200, 200))
+    solar_system.add_message("Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle circular orbit enforcement", (200, 200, 200))
     solar_system.add_message("P: Toggle alien physics | A: Add asteroid | +/-: Change speed | S: Reset speed | T: Toggle trails", (200, 200, 200))
     
     # Create the sun at the center
@@ -1177,19 +1177,19 @@ def main():
                     status = 'Enabled' if solar_system.show_trails else 'Disabled'
                     solar_system.add_message(f"Orbit trails: {status}", (150, 150, 150))
                     print(f"Orbit trails display: {status}")
-                elif event.key == pygame.K_c:  # Toggle orbit correction with 'c' key
-                    solar_system.orbit_correction_enabled = not solar_system.orbit_correction_enabled
-                    status = 'Enabled' if solar_system.orbit_correction_enabled else 'Disabled'
-                    solar_system.add_message(f"Orbit correction: {status}", (150, 150, 150))
-                    print(f"Orbit correction: {status}")
+                elif event.key == pygame.K_c:  # Toggle enforcing circular orbits with 'c' key
+                    solar_system.enforce_circular_orbit_enabled = not solar_system.enforce_circular_orbit_enabled
+                    status = 'Enabled' if solar_system.enforce_circular_orbit_enabled else 'Disabled'
+                    solar_system.add_message(f"Enforce circular orbit: {status}", (150, 150, 150))
+                    print(f"Enforce circular orbit: {status}")
                 elif event.key == pygame.K_p:  # Toggle alien physics with 'p' key
                     solar_system.alien_physics_enabled = not solar_system.alien_physics_enabled
                     status = 'Enabled' if solar_system.alien_physics_enabled else 'Disabled'
                     
-                    # If enabling alien physics, disable orbit correction for more interesting effects
+                    # If enabling alien physics, disable enforcing circular orbits for more interesting effects
                     if solar_system.alien_physics_enabled:
-                        solar_system.orbit_correction_enabled = False
-                        solar_system.add_message(f"Alien physics: {status} (orbit correction disabled)", (180, 100, 255))
+                        solar_system.enforce_circular_orbit_enabled = False
+                        solar_system.add_message(f"Alien physics: {status} (circular orbit enforcement disabled)", (180, 100, 255))
                     else:
                         solar_system.add_message(f"Alien physics: {status}", (150, 150, 150))
                     
@@ -1239,7 +1239,7 @@ def main():
         solar_system.update_all(screen)
         
         # Draw instructions (split into two lines)
-        instruction_text1 = font.render("Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle orbit correction", True, (200, 200, 200))
+        instruction_text1 = font.render("Click: Add planet | ESC: Quit | O: Toggle orbits | C: Toggle circular orbit enforcement", True, (200, 200, 200))
         instruction_text2 = font.render("P: Toggle alien physics | A: Add asteroid | +/-: Change speed | S: Reset speed | T: Toggle trails", True, (200, 200, 200))
         
         # Create transparent surfaces
@@ -1274,15 +1274,15 @@ def main():
         speed_surface.blit(speed_display, (0, 0))
         screen.blit(speed_surface, (10, 60))
         
-        # Display orbit correction status
-        orbit_correction_text = f"Orbit Correction: {'On' if solar_system.orbit_correction_enabled else 'Off'}"
-        orbit_correction_color = (0, 255, 0) if solar_system.orbit_correction_enabled else (255, 50, 50)
+        # Display circular orbit enforcement status
+        enforce_circular_orbit_text = f"Circular Orbit Enforcement: {'On' if solar_system.enforce_circular_orbit_enabled else 'Off'}"
+        enforce_circular_orbit_color = (0, 255, 0) if solar_system.enforce_circular_orbit_enabled else (255, 50, 50)
         
-        # Create transparent orbit correction display
-        orbit_correction_display = font.render(orbit_correction_text, True, orbit_correction_color)
-        orbit_surface = pygame.Surface(orbit_correction_display.get_size(), pygame.SRCALPHA)
+        # Create transparent circular orbit enforcement display
+        enforce_circular_orbit_display = font.render(enforce_circular_orbit_text, True, enforce_circular_orbit_color)
+        orbit_surface = pygame.Surface(enforce_circular_orbit_display.get_size(), pygame.SRCALPHA)
         orbit_surface.set_alpha(128)
-        orbit_surface.blit(orbit_correction_display, (0, 0))
+        orbit_surface.blit(enforce_circular_orbit_display, (0, 0))
         screen.blit(orbit_surface, (10, 85))
         
         # Display orbit trails status
