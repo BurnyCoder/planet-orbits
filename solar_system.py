@@ -686,19 +686,42 @@ def main():
         # Debug info
         print(f"Added {name}: distance={distance}, mass={mass}, size={planet.display_size}, orbital speed={orbital_speed:.2f}")
     
-    # Add asteroid belt between Mars and Jupiter
-    num_asteroids = 15  # Number of asteroids to add
-    for _ in range(num_asteroids):
-        # Asteroid belt is roughly between Mars and Jupiter
-        add_elliptical_asteroid(solar_system, 220, 260, None)
+    # Add just 2 asteroids instead of a full belt
+    print("\n# Adding initial asteroids:")
+    # One medium elliptical asteroid
+    add_elliptical_asteroid(solar_system, 200, 250, 0.4)
+    # One highly elliptical asteroid
+    add_elliptical_asteroid(solar_system, 180, 300, 0.7)
     
-    # Add some outlier asteroids with more extreme elliptical orbits
-    add_elliptical_asteroid(solar_system, 180, 300, 0.6)  # Highly elliptical
-    add_elliptical_asteroid(solar_system, 150, 350, 0.7)  # Very elliptical
+    # Add one random planet in a stable orbit
+    print("\n# Adding initial random planet:")
+    # Create a random planet at a safe distance with stable orbital properties
+    random_distance = random.uniform(220, 300)
+    angle = random.uniform(0, 2 * math.pi)
+    x = math.cos(angle) * random_distance
+    y = math.sin(angle) * random_distance
+    
+    # Calculate proper orbital velocity for stability
+    orbital_speed_factor = 0.7
+    orbital_speed = math.sqrt(sun.mass / random_distance) * orbital_speed_factor
+    
+    # Velocity perpendicular to radius for circular orbit
+    vx = -y / random_distance * orbital_speed 
+    vy = x / random_distance * orbital_speed
+    
+    # Create planet with random properties
+    mass = random.uniform(1, 3)
+    planet = Planet(mass, (x, y), (vx, vy))
+    
+    # Generate and assign random name
+    planet_name = generate_random_planet_name()
+    print(f"Added random planet: {planet_name} at distance {random_distance:.1f}")
+    
+    solar_system.add_body(planet, planet_name)
     
     # Add font for instructions
     font = pygame.font.SysFont('Arial', 18)
-    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | +/- to change speed | A to add asteroid', True, WHITE)
+    instruction_text = font.render('Click to add planets | ESC to quit | O to toggle orbits | +/- to change speed | A to add asteroid | S to reset speed', True, WHITE)
     
     # Global for time scale
     global TIME_SCALE
@@ -717,13 +740,29 @@ def main():
                 elif event.key == pygame.K_o:  # Toggle orbits with 'o' key
                     solar_system.show_orbits = not solar_system.show_orbits
                 elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS or event.key == pygame.K_EQUALS:
-                    # Increase speed
-                    TIME_SCALE = min(TIME_SCALE * 1.25, 2.0)
+                    # Increase speed - use larger multiplier at higher speeds
+                    if TIME_SCALE < 1.0:
+                        TIME_SCALE *= 1.25  # Gentle increase at lower speeds
+                    elif TIME_SCALE < 10.0:
+                        TIME_SCALE *= 1.5   # Medium increase for moderate speeds
+                    else:
+                        TIME_SCALE *= 2.0   # Double the speed for high speeds
                     print(f"Speed: {TIME_SCALE:.2f}x")
                 elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
-                    # Decrease speed
-                    TIME_SCALE = max(TIME_SCALE * 0.8, 0.01)
+                    # Decrease speed - use appropriate scaling based on current speed
+                    if TIME_SCALE > 10.0:
+                        TIME_SCALE *= 0.5   # Halve the speed for high speeds
+                    elif TIME_SCALE > 1.0:
+                        TIME_SCALE *= 0.67  # Medium decrease for moderate speeds
+                    else:
+                        TIME_SCALE *= 0.8   # Gentle decrease at lower speeds
+                    
+                    # Ensure minimum speed
+                    TIME_SCALE = max(TIME_SCALE, 0.01)
                     print(f"Speed: {TIME_SCALE:.2f}x")
+                elif event.key == pygame.K_s:  # 'S' key to reset speed to normal
+                    TIME_SCALE = 1.0
+                    print(f"Speed reset to {TIME_SCALE:.2f}x (normal)")
                 elif event.key == pygame.K_a:  # 'A' key to add random asteroid
                     # Add a random asteroid with elliptical orbit
                     min_distance = 120  # Min distance from sun
@@ -742,9 +781,21 @@ def main():
         # Draw instructions
         screen.blit(instruction_text, (10, 10))
         
-        # Display current speed
-        speed_text = font.render(f"Speed: {TIME_SCALE:.2f}x", True, WHITE)
-        screen.blit(speed_text, (10, 40))
+        # Display current speed with appropriate formatting for large values
+        speed_text = ""
+        if TIME_SCALE < 100:
+            speed_text = f"Speed: {TIME_SCALE:.2f}x"
+        else:
+            speed_text = f"Speed: {int(TIME_SCALE)}x"
+        
+        speed_color = WHITE
+        if TIME_SCALE > 20:
+            speed_color = (255, 150, 0)  # Orange for high speeds
+        if TIME_SCALE > 100:
+            speed_color = (255, 50, 50)  # Red for very high speeds
+            
+        speed_display = font.render(speed_text, True, speed_color)
+        screen.blit(speed_display, (10, 40))
         
         # Update display
         pygame.display.flip()
